@@ -28,13 +28,15 @@
 // Overloaded operators for printing
 #include "stream.h"
 // The language (w/o composition function)
-#include "agent/language.h"
+#include "objects/Language.h"
 // The world that produces the context
-#include "agent/world.h"
-// The agents that observe and produce
-#include "agent/agent.h"
-// The DSL for the composition function
-#include "agent/DSL.h"
+#include "objects/World.h"
+// DSL, CompGrammar, CompHypothesis
+#include "objects/LoT.h"
+// The agents that produce, interpret, and learn
+#include "objects/Agent.h"
+// The population of agents implementing the IL 
+#include "objects/Population.h"
 
 
 int main(int argc, char** argv) {
@@ -83,7 +85,7 @@ int main(int argc, char** argv) {
 
 /* 	std::cout << "output: " << output_t(c) << std::endl; */
 
-	Speaker speaker = Speaker();
+	Agent speaker = Agent();
 	
 	// I need to explicitly specify the type of the function
 	// because in COMP_DSL is it defined as lambda

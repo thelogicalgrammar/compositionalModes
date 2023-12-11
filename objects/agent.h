@@ -199,7 +199,7 @@ private:
 public:
 
 	// Constructor
-	Speaker() {
+	Agent() {
 
 		lex = LexicalSemantics();
 		// initialize the terminals map
@@ -499,17 +499,5 @@ public:
 
         return validBTCs;
     }
-
-};
-
-
-class Population {
-
-private:
-
-public:
-
-	Population() {
-	}
 
 };

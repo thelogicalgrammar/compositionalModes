@@ -3,24 +3,19 @@
 // the individuals are tuples of (int, bool)
 // where the int is the actual value
 // and the bool is whether or not it is a target
+// NOTE: I assume all ADJs are actually t_IVs
 using t_e     = std::tuple<int, bool>;
 using t_context = std::set<t_e>;
 using t_t   = bool;
-
 using t_UC  = ft< t_t,  t_t  >;
 using t_BC  = ft< t_UC, t_t  >;
-// e.g., "if x then y else z"
-using t_BC2 = ft< t_BC, t_t	 >;
-// IV, CN, ADJ
-using t_IV  = ft< t_t,  t_e    >;
-// DP (e.g., "something (is)")
-using t_DP  = ft< t_t,  t_IV >;
-// TV, P
-using t_TV  = ft< t_IV, t_e    >;
-// ADJ, ADV
-// But let's assume all ADJs are actually t_IVs
-/* using t_ADJ = ft< t_IV, t_IV >; */
+using t_BC2 = ft< t_BC, t_t	 >; // e.g., "if x then y else z"
+using t_IV  = ft< t_t,  t_e  >; // IV, CN, ADJ
+using t_DP  = ft< t_t,  t_IV >; // DP (e.g., "something (is)")
+using t_TV  = ft< t_IV, t_e  >; // TV, P
 using t_Q   = ft< t_DP, t_IV >;
+/* using t_ADJ = ft< t_IV, t_IV >; */
+
 // The Empty type represents non-composibility
 // (i.e. meaninglessness)
 struct Empty {};
@@ -70,7 +65,6 @@ using t_meaning = std::variant<
 	Empty_M
 >;
 
-using t_meaning_trans = ft<t_meaning, t_meaning, t_meaning>;
 // Define the types of the composition function
 // i.e., a meaning transformation
 using t_BTC_compose = 
