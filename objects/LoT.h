@@ -14,17 +14,19 @@ template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 // the second can be applied to the first
 // NOTE: it cannot be done easily because we cannot "look"
 // into the type of the extension easily
-// (There's probably some more elegant way to do this)
-template <typename T, typename U> struct is_compatible : std::false_type {};
-template <> struct is_compatible<t_UC_M,  t_t_M> :  std::true_type {};
-template <> struct is_compatible<t_BC_M,  t_t_M> :  std::true_type {};
-template <> struct is_compatible<t_BC2_M, t_t_M> :  std::true_type {};
-template <> struct is_compatible<t_IV_M,  t_e_M> :  std::true_type {};
-template <> struct is_compatible<t_DP_M,  t_IV_M>:  std::true_type {};
-template <> struct is_compatible<t_TV_M,  t_e_M> :  std::true_type {};
-template <> struct is_compatible<t_Q_M,   t_IV_M>:  std::true_type {};
+// (There's probably some more elegant way to do this but it 
+// would require a restructuring of the way meanings are represented)
+template <typename T, typename U> struct accepts_arg : std::false_type {};
+template <> struct accepts_arg< t_UC_M,  t_t_M> :  std::true_type {};
+template <> struct accepts_arg< t_BC_M,  t_t_M> :  std::true_type {};
+template <> struct accepts_arg< t_BC2_M, t_t_M> :  std::true_type {};
+template <> struct accepts_arg< t_IV_M,  t_e_M> :  std::true_type {};
+template <> struct accepts_arg< t_DP_M,  t_IV_M>:  std::true_type {};
+template <> struct accepts_arg< t_TV_M,  t_e_M> :  std::true_type {};
+template <> struct accepts_arg< t_Q_M,   t_IV_M>:  std::true_type {};
 template <typename T, typename U>
-inline constexpr bool is_compatible_v = is_compatible<T, U>::value;
+// this is a helper variable template
+inline constexpr bool accepts_arg_v = accepts_arg<T, U>::value;
 
 // apply needs to return a t_meaning
 // which is a function from a context to a specific extension type
@@ -52,7 +54,7 @@ namespace COMP_DSL{
 					// Create a new meaning, 
 					// i.e., a function from a context 
 					// to an extension.
-					if constexpr (is_compatible_v<T,U>) {
+					if constexpr (accepts_arg_v<T,U>) {
 						return [f,arg](t_context c) 
 							-> auto {return f(c)(arg(c));};
 					} else {
@@ -72,8 +74,9 @@ namespace COMP_DSL{
 
 	// check if a meaning is a specific type
 	template <typename T>
-	std:function<bool(t_meaning)> is_T = 
-		[](t_meaning m) -> bool {return std::holds_alternative<T>(m);};
+	std::function<bool(t_meaning)> is_T = [](t_meaning m) 
+		-> bool {return std::holds_alternative<T>(m);};
+
 	// if a meaning is of a specific type,
 	// return it, otherwise return another
 	template <typename T>
@@ -98,36 +101,25 @@ namespace COMP_DSL{
 
 	// implement a choice function
 	// of an entity in context that satisfies a property
-	std::function<t_meaning(t_meaning)>
-	choice = [](t_meaning m) -> t_meaning {
-		return std::visit(
-			[](auto&& m) -> t_meaning {
-				using T = std::decay_t<decltype(m)>;
-				if constexpr 		(std::is_same_v<T,t_t_M>) {
-					return m;
-				} else if constexpr (std::is_same_v<T,t_e_M>) {
-					return m;
-				} else if constexpr (std::is_same_v<T,t_UC_M>) {
-					return m;
-				} else if constexpr (std::is_same_v<T,t_BC_M>) {
-					return m;
-				} else if constexpr (std::is_same_v<T,t_BC2_M>) {
-					return m;
-				} else if constexpr (std::is_same_v<T,t_IV_M>) {
-					return m;
-				} else if constexpr (std::is_same_v<T,t_DP_M>) {
-					return m;
-				} else if constexpr (std::is_same_v<T,t_TV_M>) {
-					return m;
-				} else if constexpr (std::is_same_v<T,t_Q_M>) {
-					return m;
-				} else {
-					return Empty{};
-				}
-			},
-			m
-		);
-	};
+	// I.e., it chooses an entity (type `e`)
+	// that satisfies a property.
+	/* std::function<t_meaning(t_meaning)> */
+	/* choice = [](t_meaning m) -> t_meaning { */
+	/* 	return std::visit( */
+	/* 		[](auto&& m) -> t_meaning { */
+	/* 			using T = std::decay_t<decltype(m)>; */
+	/* 			// If the meaning encodes a property, */
+	/* 			// choose an entity that satisfies it */
+	/* 			// from the context */
+	/* 			if constexpr (std::is_same_v<T,t_IV_M>) { */
+	/* 				return m; */
+	/* 			} else { */
+	/* 				return Empty{}; */
+	/* 			} */
+	/* 		}, */
+	/* 		m */
+	/* 	); */
+	/* }; */
 
 }
 

@@ -25,16 +25,5 @@ t_context generateContext(
 		}
 	}
 
-	// NOTE: this is the old version
-	// which does not guarantee uniqueness
-/* 	t_context context; */
-/* 	t_intdist dist(-10, 10); */
-/* 	for (int i = 0; i < size; i++){ */
-/* 		context.insert(std::make_tuple( */
-/* 			dist(rng), */
-/* 			dist(rng) > 0 */
-/* 		)); */
-/* 	} */
-
 	return context;
 }

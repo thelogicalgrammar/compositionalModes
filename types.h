@@ -7,6 +7,7 @@
 using t_e     = std::tuple<int, bool>;
 using t_context = std::set<t_e>;
 using t_t   = bool;
+
 using t_UC  = ft< t_t,  t_t  >;
 using t_BC  = ft< t_UC, t_t  >;
 using t_BC2 = ft< t_BC, t_t	 >; // e.g., "if x then y else z"

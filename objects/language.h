@@ -13,25 +13,6 @@
 std::string meaningTypeToString(const t_meaning& meaning) {
     return std::visit([](auto&& arg) -> std::string {
         using T = std::decay_t<decltype(arg)>;
-        /* if constexpr (std::is_same_v<T, e>) { */
-        /*     return "e"; */
-        /* } else if constexpr (std::is_same_v<T, t_t>) { */
-        /*     return "t"; */
-        /* } else if constexpr (std::is_same_v<T, t_UC>) { */
-        /*     return "<t,t>"; */
-        /* } else if constexpr (std::is_same_v<T, t_BC>) { */
-        /*     return "<t,<t,t>>"; */
-        /* } else if constexpr (std::is_same_v<T, t_BC2>) { */
-        /*     return "<t,<t,<t,t>>>"; */
-        /* } else if constexpr (std::is_same_v<T, t_IV>) { */
-        /*     return "<e,t>"; */
-        /* } else if constexpr (std::is_same_v<T, t_DP>) { */
-        /*     return "<<e,t>,t>"; */
-        /* } else if constexpr (std::is_same_v<T, t_TV>) { */
-        /*     return "<e,<e,t>>"; */
-        /* } else if constexpr (std::is_same_v<T, t_Q>) { */
-        /*     return "<<e,t>,<<e,t>,t>>"; */
-        /* } else */ 
 		if constexpr (std::is_same_v<T, t_t_M>) {
             return "<s,t>";
         } else if constexpr (std::is_same_v<T, t_UC_M>) {
@@ -66,6 +47,9 @@ private:
 
 public:
 
+	// Initialize the lexical meanings
+	// (this leaves the composition function
+	// still undefined)
 	LexicalSemantics() {
 
 		// e are numbers

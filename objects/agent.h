@@ -201,8 +201,11 @@ public:
 	// Constructor
 	Agent() {
 
+		// initialize the lexical semantics
+		// which includes the meaning of each terminal
 		lex = LexicalSemantics();
 		// initialize the terminals map
+		// which is a map from each type to the terminals of that type
 		terminalsMap = generateTerminalsMap();
 		// initialize the maximum depth of utterances
 		initialMaxDepth = 4;
@@ -276,7 +279,10 @@ public:
 		);
 	}
 
+	// Goes from a sentence to the probability
+	// that each element in the context is a target
 	std::vector<double> interpret(
+			// The agent sees a full sentence
 			std::unique_ptr<BTC>& s,
 			t_context observedC,
 			t_BTC_compose compositionFn
@@ -360,7 +366,7 @@ public:
 	// to the combination of types that can be composed
 	// (i.e. the types that can be the left and right
 	// children of the composition function)
-	// Nodes don't compose if they return Empty{}.
+	// Nodes don't compose only if they return Empty{}.
 	t_cfgMap generateCFGMap(t_BTC_compose& compositionFn) {
 
 		// Map from each type to the types 
