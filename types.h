@@ -4,9 +4,9 @@
 // where the int is the actual value
 // and the bool is whether or not it is a target
 // NOTE: I assume all ADJs are actually t_IVs
-using t_e     = std::tuple<int, bool>;
+using t_e     	= std::tuple<int, bool>;
+using t_t   	= bool;
 using t_context = std::set<t_e>;
-using t_t   = bool;
 
 using t_UC  = ft< t_t,  t_t  >;
 using t_BC  = ft< t_UC, t_t  >;
@@ -20,6 +20,16 @@ using t_Q   = ft< t_DP, t_IV >;
 // The Empty type represents non-composibility
 // (i.e. meaninglessness)
 struct Empty {};
+
+// The PresuppositionFailure type represents a failure to
+// satisfy a presupposition.
+// It can be raised by a meaning function to indicate that
+// the meaning function cannot be applied to the given input.
+struct PresuppositionFailure : public std::exception {
+    const char* what() const throw() {
+        return "Presupposition failure occurred";
+    }
+};
 
 
 // Define the types of the intensions

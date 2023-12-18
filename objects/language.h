@@ -285,20 +285,17 @@ public:
 			[](t_context c) -> t_Q {
 				return [c](t_IV x) -> t_DP {
 					return [x,c](t_IV y) -> t_t {
+						// if there's 0 or more than 1 x
+						// that satisfies x, throw PresuppositionFailure
+						int count = 0;
 						bool found = false;
 						for (auto e : c) {
-							if (x(e)) {
-								// if we've already found one,
-								if (found) return false;
-								// if this one isn't y, return false
-								if (!y(e)) return false;
-								// otherwise, we've found one
-								found = true;
-							}
+							if (x(e) && y(e)) found = true;
+							if (x(e)) count++;
+							if (count > 1) throw PresuppositionFailure();
 						}
-						if (!found) return false;
-						// if we found one, return true
-						return true;
+						if (count == 0) throw PresuppositionFailure();
+						return found;
 					};
 				};
 			};

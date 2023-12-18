@@ -75,7 +75,17 @@ private:
 			generateContextVariations(observedC);
 		int nTrue = 0;
 		for (t_context c : possibleContexts) {
-			nTrue = nTrue + meaning(c);
+			// catch 'PresuppositionFailure' exception
+
+			try {
+				nTrue = nTrue + meaning(c);
+			} catch (PresuppositionFailure& e) {
+				// if the meaning fails to compute
+				// it means that the context is not
+				// compatible with the meaning
+				// so we just ignore it
+				continue;
+			}
 		}
 		// compute informativity against 
 		// set of all possible alternatives
@@ -85,6 +95,9 @@ private:
 		);
 	}
 
+	// Generates a random tree
+	// given a description of the type of the root
+	// and a CFG map
 	std::unique_ptr<BTC> generateRandomTree(
 			// a string describing the type of the node
 			// (a key in cdfMap)
@@ -237,8 +250,7 @@ public:
 				c, compositionFn, rng
 			);
 
-		// Calculates the utility of each
-		// sentence
+		// Calculates the utility of each sentence
 		std::vector<double> utilities;
 		for (auto& s : sentences) {
 			t_t_M meaning = std::get<t_t_M>(
@@ -293,41 +305,44 @@ public:
 			s->compose(compositionFn)
 		);
 		
-		// loop over all possible contexts
-		// and compute the probability of each
-		// element in the context
-		// being a target given the sentence
+		// loop over all possible contexts and compute the probability 
+		// of each element in the context being a target given the sentence.
 		// `probs` is a vector of 0s with the length of the context
-		// NOTE: The agent can only see the 
-		// first component of each context element
-		// which is an integer.
+		// NOTE: The agent can only see the first component 
+		// of each context element, which is an integer.
 		t_contextVector possibleContexts = 
 			generateContextVariations(observedC);
 		int numTrue = 0;
 		std::vector<double> probs(observedC.size(),0);
-		// NOTE: in old version of code,
-		// possible contexts can have different lengths
-		// from the observed context if 
-		// there the same int in the observed context
-		// appears both as a target and as a distractor.
-		// Now ints are unique!
+		// Now ints are unique in the context!
 		for (auto& c : possibleContexts) {
 			// print context
 			std::cout << c;
-			// if the sentence is true of the context
-			if (meaning(c)) {
-				numTrue++;
-				// if so, update the probability of each element
-				// in the context being a target
-				int i = 0;
-				for (auto e : c) {
-					probs[i] += std::get<1>(e);
-					i++;
+			bool truthvalue;
+
+			try {
+				truthvalue = meaning(c);
+				// if the sentence is true of the context
+				if (truthvalue) {
+					numTrue++;
+					// if so, update the probability of each element
+					// in the context being a target
+					int i = 0;
+					for (auto e : c) {
+						probs[i] += std::get<1>(e);
+						i++;
+					}
+					std::cout << " TRUE ";
+				} else {
+					std::cout << " FALSE";
 				}
-				std::cout << " TRUE ";
-			} else {
-				std::cout << " FALSE";
+			} catch (PresuppositionFailure& e) {
+				// If the sentence presupposes something
+				// that is not true of the context,
+				// then the context can be ignored.
+				std::cout << " PFAIL";
 			}
+
 			// print the prob vector
 			std::cout << " " << probs << std::endl;
 		}
@@ -428,6 +443,13 @@ public:
 		return cfgMap;
 	}
 
+	// This function takes a context and a composition function
+	// and returns a vector of BTCs
+	// that are true in that context
+	// Excludes BTCs that are:
+	// - not true in the context
+	// - not valid (i.e. have a type that can't be composed)
+	// - have a presupposition failure
 	t_BTC_vec generateRandomBTCsWithEvaluation(
 			t_context context,
 			t_BTC_compose compositionFn,
@@ -440,7 +462,9 @@ public:
 
 		t_cfgMap cfgMap = this->generateCFGMap(compositionFn);
 
+		/* Old code that finds nSamples valid BTCs */
         /* while (validBTCs.size() < static_cast<size_t>(nSamples)) { */
+
 		// loop for nSamples
 		for (int i = 0; i < this->nSamples; i++) {
 
@@ -453,7 +477,8 @@ public:
 				cfgMap,
 				rng
 			);
-			// Convert it to an S-expression
+			// Convert it to an S-expression to check
+			// if it has already been evaluated
             std::string treeRepresentation = btc->toSExpression();
 
 			// If the tree has already been evaluated
@@ -467,6 +492,7 @@ public:
 
 			// Evaluate the tree
             t_meaning result = btc->compose(compositionFn);
+
 			// Apply the result to the context to get a bool
 			t_extension extension = std::visit(
 				[&context](auto&& result_M) {
@@ -475,12 +501,19 @@ public:
 					// NOTE: Need to explicitly 
 					// cast to t_extension
 					// rather than directly return
-					t_extension result = result_M(context);
-					return result;
+					try {
+						t_extension result = result_M(context);
+						return result;
+					} catch (PresuppositionFailure& e) {
+						// If there is a presupposition failure
+						// return Empty{}
+						return t_extension(Empty{});
+					}
 				},
 				result
 			);
 			// if the result (a t_extension) has a bool value
+			// (rather than being Empty{})
 			// and that bool value is true
             if (
 				std::holds_alternative<t_t>(extension) && 

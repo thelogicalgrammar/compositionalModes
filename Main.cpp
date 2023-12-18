@@ -13,6 +13,7 @@
 #include <tuple>
 #include <math.h>
 #include <bitset>
+#include <exception>
 
 // Fleet stuff
 #include "Functional.h"
