@@ -65,7 +65,13 @@ int main(int argc, char** argv) {
 	
 	// the dependency of the meanings on the context
 	// is encoded directly in the lexicon
-	LexicalSemantics lex = LexicalSemantics();
+	LexicalSemantics lex = LexicalSemantics(
+		true,
+		true,
+		true,
+		true,
+		true
+	);
 
 	/////// Test the lexicon
 

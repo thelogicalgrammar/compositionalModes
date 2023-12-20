@@ -98,10 +98,10 @@ private:
 	// Generates a random tree
 	// given a description of the type of the root
 	// and a CFG map
-	std::unique_ptr<BTC> generateRandomTree(
+	std::optional<std::unique_ptr<BTC>> generateRandomTree(
 			// a string describing the type of the node
 			// (a key in cdfMap)
-			std::string description,
+			std::string typeName,
 			// CFG map from each type 
 			// to the types that can be composed with it
 			// (this is inferred from the composition function)
@@ -112,15 +112,22 @@ private:
 			std::mt19937& rng
 		) {
 	
-		// check if description is not in the terminals map
-		bool noterminal = terminalsMap.find(description) == terminalsMap.end();
+		// is typeName not in the terminals map?
+		bool noterminal = 
+			terminalsMap.find(typeName) == terminalsMap.end();
 
-		// check if description is not in the cfg map
-		bool nocfg = cfgMap.find(description) == cfgMap.end();
+		// is typeName not in the cfg map?
+		bool nocfg = 
+			cfgMap.find(typeName) == cfgMap.end();
 
-		// assert that description is in 
-		// at least one of the maps
-		assert(!noterminal || !nocfg);
+		// If there is no terminal of the given type
+		// AND we cannot get it by composition,
+		// there is nowhere to go.
+		// Return an empty optional
+		// and this is dealt with in the caller.
+		if (noterminal & nocfg){
+			return std::nullopt;
+		}
 
 		// decide whether to create a leaf node
 		bool createLeaf;
@@ -145,19 +152,19 @@ private:
 
 			// Create a leaf node
 			// leafIndex is the index of the meaning name in terminalMap
-			// print description
+			// print typeName
             int leafIndex = t_intdist(
 				0,
-				terminalsMap.at(description).size() - 1
+				terminalsMap.at(typeName).size() - 1
 			)(rng);
 
             auto it = std::next(
-				terminalsMap.at(description).begin(),
+				terminalsMap.at(typeName).begin(),
 				leafIndex
 			);
 			
 			// Create a leaf node
-			// with the meaning and description
+			// with the meaning and typeName
             return std::make_unique<BTC>(
 				this->lex.at(*it),
 				*it
@@ -168,10 +175,10 @@ private:
 			// choose random types tuple for the children
 			// from the set of tuples of types whose composition
 			// results in the current type
-			auto it = cfgMap.find(description);
+			auto it = cfgMap.find(typeName);
 			if (it == cfgMap.end()) {
 				throw std::runtime_error(
-					"Unknown type: " + description
+					"Unknown type: " + typeName
 				);
 			}
 			int leftIndex = t_intdist(
@@ -202,12 +209,16 @@ private:
 				cfgMap,
 				rng
 			);
-			return std::make_unique<BTC>(
-				std::move(leftChild),
-				std::move(rightChild)
-			);
+			if (leftChild.has_value() && rightChild.has_value()) {
+				return std::make_unique<BTC>(
+					std::move(leftChild.value()),
+					std::move(rightChild.value())
+				);
+			} else {
+				return std::nullopt;
+			}
 		}
-    }
+	}
 
 public:
 
@@ -215,8 +226,22 @@ public:
 	Agent() {
 
 		// initialize the lexical semantics
-		// which includes the meaning of each terminal
-		lex = LexicalSemantics();
+		// which includes the meaning of each terminal.
+		// For convenience, we can decide whether
+		// to include each type of meaning from the
+		// default lexicon.
+		lex = LexicalSemantics(
+			// BFs
+			true,
+			// IVs
+			true,
+			// TVs
+			true,
+			// DPs
+			true,
+			// Qs
+			true
+		);
 		// initialize the terminals map
 		// which is a map from each type to the terminals of that type
 		terminalsMap = generateTerminalsMap();
@@ -391,35 +416,22 @@ public:
 		// List of all possible types in t_meaning
 		// and give an example of each
 		// TODO: Make this more elegant
-		// NOTE: This introduces the assumption that
-		// whether the composition function 
+		// NOTE: the fact that the utterance search
+		// is restricted by the CFG defined in this function
+		// means that whether the composition function 
 		// returns Empty{} or not
 		// (i.e., whether the nodes can be composed)
-		// depends *only* on the type
-		
+		// must depend *only* on the type
 		std::vector<t_meaning> types = {
-
-			// TODO: add "e" if I end up adding instances of it
-			// directly in the lexicon
-			
-			// I have t_t cause that's always at the top
-			// so I should know how to get to it
+			t_e_M{},
 			t_t_M{}, 
-			// t_UC
-			this->lex.at("l_not"),
-			// t_BC
-			this->lex.at("l_and"),
-			// t_BC2
-			this->lex.at("l_if_else"),
-			// t_IV
-			this->lex.at("target"),
-			// t_DP
-			this->lex.at("everything"),
-			// t_TV
-			this->lex.at("equal"),
-			// t_Q
-			this->lex.at("every"),
-			// Empty type (indicating that the nodes can't be composed)
+			t_UC_M{},
+			t_BC_M{},
+			t_BC2_M{},
+			t_IV_M{},
+			t_DP_M{},
+			t_TV_M{},
+			t_Q_M{},
 			Empty_M{}
 		};
 
@@ -445,9 +457,11 @@ public:
 
 	// This function takes a context and a composition function
 	// and returns a vector of BTCs
-	// that are true in that context
+	// that are true in that context.
+	// This belongs to agent because it encodes the way
+	// the agent searches the space of utterances.
 	// Excludes BTCs that are:
-	// - not true in the context
+	// - false in context
 	// - not valid (i.e. have a type that can't be composed)
 	// - have a presupposition failure
 	t_BTC_vec generateRandomBTCsWithEvaluation(
@@ -462,81 +476,85 @@ public:
 
 		t_cfgMap cfgMap = this->generateCFGMap(compositionFn);
 
-		/* Old code that finds nSamples valid BTCs */
-        /* while (validBTCs.size() < static_cast<size_t>(nSamples)) { */
-
 		// loop for nSamples
 		for (int i = 0; i < this->nSamples; i++) {
 
-			// Generate a random tree
-			// encoding a proposition
+			// Generate a random tree encoding a proposition
 			// (function from a context to a bool)
-            auto btc = generateRandomTree(
+            std::optional<std::unique_ptr<BTC>> maybeBtc = generateRandomTree(
 				"<s,t>",
 				this->initialMaxDepth,
 				cfgMap,
 				rng
 			);
-			// Convert it to an S-expression to check
-			// if it has already been evaluated
-            std::string treeRepresentation = btc->toSExpression();
 
-			// If the tree has already been evaluated
-			// or if it has been marked as invalid skip it
-            if (
-				evaluatedTrees.find(treeRepresentation) != evaluatedTrees.end() 
-				||
-                invalidTrees.find(treeRepresentation) != invalidTrees.end()) {
-                continue; 
-            }
+			if (!maybeBtc.has_value()) {
+				// If the tree is invalid, skip this iteration
+				continue;
+			} else {
 
-			// Evaluate the tree
-            t_meaning result = btc->compose(compositionFn);
+				std::unique_ptr<BTC> btc = std::move(maybeBtc.value());
 
-			// Apply the result to the context to get a bool
-			t_extension extension = std::visit(
-				[&context](auto&& result_M) {
-					// All meanings are functions from 
-					// contexts to something in t_extension
-					// NOTE: Need to explicitly 
-					// cast to t_extension
-					// rather than directly return
-					try {
-						t_extension result = result_M(context);
-						return result;
-					} catch (PresuppositionFailure& e) {
-						// If there is a presupposition failure
-						// return Empty{}
-						return t_extension(Empty{});
-					}
-				},
-				result
-			);
-			// if the result (a t_extension) has a bool value
-			// (rather than being Empty{})
-			// and that bool value is true
-            if (
-				std::holds_alternative<t_t>(extension) && 
-				std::get<t_t>(extension)
-			) {
-                evaluatedTrees.insert(treeRepresentation);
-                validBTCs.push_back(std::move(btc));
-				// Print the tree
-				/* std::cout << "\n" << treeRepresentation << std::endl; */
-			// if it holds a bool but it's false
-			} else if (std::holds_alternative<t_t>(extension)) {
-				// print "false" to help with debugging
-				/* std::cout << "false" << std::endl; */
-				// Print the tree
-				/* std::cout << "\n" << treeRepresentation << std::endl; */
-				invalidTrees.insert(treeRepresentation);
-            } else {
-				/* std::cout << "\n" << treeRepresentation << std::endl; */
-                invalidTrees.insert(treeRepresentation);
-            }
-        }
+				// Convert it to an S-expression to check
+				// if it has already been evaluated
+				std::string treeRep = btc->toSExpression();
 
-        return validBTCs;
-    }
+				// If the tree has already been evaluated
+				// or if it has been marked as invalid skip it
+				if (
+					evaluatedTrees.find(treeRep) != evaluatedTrees.end() 
+					||
+					invalidTrees.find(treeRep) != invalidTrees.end()) {
+					continue; 
+				}
 
+				// Evaluate the tree
+				t_meaning result = btc->compose(compositionFn);
+
+				// Apply the result to the context to get a bool
+				t_extension extension = std::visit(
+					[&context](auto&& result_M) {
+						// All meanings are functions from 
+						// contexts to something in t_extension
+						// NOTE: Need to explicitly 
+						// cast to t_extension
+						// rather than directly return
+						try {
+							t_extension result = result_M(context);
+							return result;
+						} catch (PresuppositionFailure& e) {
+							// If there is a presupposition failure
+							// return Empty{}
+							return t_extension(Empty{});
+						}
+					},
+					result
+				);
+				// if the result (a t_extension) has a bool value
+				// (rather than being Empty{})
+				// and that bool value is true
+				if (
+					std::holds_alternative<t_t>(extension) && 
+					std::get<t_t>(extension)
+				) {
+					evaluatedTrees.insert(treeRep);
+					validBTCs.push_back(std::move(btc));
+					// Print the tree
+					/* std::cout << "\n" << treeRep << std::endl; */
+				// if it holds a bool but it's false
+				} else if (std::holds_alternative<t_t>(extension)) {
+					// print "false" to help with debugging
+					/* std::cout << "false" << std::endl; */
+					// Print the tree
+					/* std::cout << "\n" << treeRep << std::endl; */
+					invalidTrees.insert(treeRep);
+				} else {
+					/* std::cout << "\n" << treeRep << std::endl; */
+					invalidTrees.insert(treeRep);
+				}
+			}
+		}
+
+		return validBTCs;
+	}
 };

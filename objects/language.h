@@ -13,7 +13,9 @@
 std::string meaningTypeToString(const t_meaning& meaning) {
     return std::visit([](auto&& arg) -> std::string {
         using T = std::decay_t<decltype(arg)>;
-		if constexpr (std::is_same_v<T, t_t_M>) {
+		if 		  constexpr (std::is_same_v<T, t_e_M>) {
+			return "<s,e>";
+		} else if constexpr (std::is_same_v<T, t_t_M>) {
             return "<s,t>";
         } else if constexpr (std::is_same_v<T, t_UC_M>) {
             return "<s,<t,t>>";
@@ -47,14 +49,20 @@ private:
 
 public:
 
+	void add(std::string name, t_meaning m) {
+		interpretation_f[name] = m;
+	}
+
 	// Initialize the lexical meanings
 	// (this leaves the composition function
 	// still undefined)
-	void addDefaultLexicon() {
+	//
+	// e are numbers
+	// there are no `t`s in the lexicon directly
+	// Empty is an empty struct
 
-		// e are numbers
-		// there are no `t`s in the lexicon directly
-		// Empty is an empty struct
+	// Boolean functions
+	void addBFs() {
 
 		// t_UC
 		
@@ -93,6 +101,7 @@ public:
 		);
 		
 		// t_BC2
+		
 		add(
 			"l_if_else",
 			[](t_context c) -> t_BC2 {
@@ -106,9 +115,11 @@ public:
 			}
 		);
 
-		// t_IV
-		add(
-			"positive",
+	}
+
+	void addIVs() {
+
+		add( "positive",
 			[](t_context c) -> t_IV {
 				return [](t_e x) -> t_t {
 					int o = std::get<0>(x);
@@ -117,8 +128,7 @@ public:
 			}
 	   	);
 
-		add(
-			"negative",
+		add( "negative",
 			[](t_context c) -> t_IV {
 				return [](t_e x) -> t_t {
 					int o = std::get<0>(x);
@@ -127,8 +137,7 @@ public:
 			}
 		);
 
-		add(
-			"even",
+		add( "even",
 			[](t_context c) -> t_IV {
 				return [](t_e x) -> t_t {
 					int o = std::get<0>(x);
@@ -137,8 +146,7 @@ public:
 			}
 		);
 
-		add(
-			"prime",
+		add( "prime",
 			[](t_context c) -> t_IV {
 				return [](t_e x) -> t_t {
 					int o = std::get<0>(x);
@@ -153,11 +161,29 @@ public:
 			}
 		);
 
-		// t_TV
+		add( "target",
+			[](t_context c) -> t_IV {
+				return [](t_e x) -> t_t {
+					// check that the object is a target
+					return std::get<1>(x);
+				};
+			}
+		);
+
+		add( "distractor",
+			[](t_context c) -> t_IV {
+				return [](t_e x) -> t_t {
+					// check that the object is a target
+					return !std::get<1>(x);
+				};
+			}
+		);
+	}
+
+	void addTVs() {
 
 		// greater than
-		add(
-			"gt",
+		add( "gt",
 			[](t_context c) -> t_TV{
 				return [](t_e y) -> t_IV {
 					int o1 = std::get<0>(y);
@@ -172,8 +198,7 @@ public:
 		// two properties are equal
 		// with respect to their content
 		// (ignores target status)
-		add(
-			"equal",
+		add( "equal",
 			[](t_context c) -> t_TV {
 				return [](t_e y) -> t_IV {
 					int o1 = std::get<0>(y);
@@ -185,8 +210,7 @@ public:
 			}
 		);
 
-		add(
-			"divides",
+		add( "divides",
 			[](t_context c) -> t_TV {
 				return [](t_e y) -> t_IV {
 					int o1 = std::get<0>(y);
@@ -209,11 +233,11 @@ public:
 				}
 			);
 		}
+	}
+
+	void addDPs() {
 		
-		// t_DP
-		
-		add(
-			"something",
+		add( "something",
 			[](t_context c) -> t_DP {
 				return [c](t_IV x) -> t_t {
 					// loop over the domain
@@ -226,8 +250,7 @@ public:
 			}
 		);
 
-		add(
-			"everything",
+		add( "everything",
 			[](t_context c) -> t_DP {
 				return [c](t_IV x) -> t_t {
 					// loop over the domain
@@ -239,32 +262,11 @@ public:
 			}
 		);
 
-		// t_IV
+	}
+	
+	void addQs() {
 		
-		add(
-			"target",
-			[](t_context c) -> t_IV {
-				return [](t_e x) -> t_t {
-					// check that the object is a target
-					return std::get<1>(x);
-				};
-			}
-		);
-
-		add(
-			"distractor",
-			[](t_context c) -> t_IV {
-				return [](t_e x) -> t_t {
-					// check that the object is a target
-					return !std::get<1>(x);
-				};
-			}
-		);
-
-		// t_Q
-		
-		add(
-			"every",
+		add( "every",
 			[](t_context c) -> t_Q {
 				return [c](t_IV x) -> t_DP {
 					return [x,c](t_IV y) -> t_t {
@@ -278,8 +280,7 @@ public:
 			}
 		);
 
-		add(
-			"some",
+		add( "some",
 			[](t_context c) -> t_Q {
 				return [c](t_IV x) -> t_DP {
 					return [x,c](t_IV y) -> t_t {
@@ -297,8 +298,7 @@ public:
 		// If there is no or more than one x,
 		// throws PresuppositionFailure.
 		// otherwise returns false
-		add(
-			"the",
+		add( "the",
 			[](t_context c) -> t_Q {
 				return [c](t_IV x) -> t_DP {
 					return [x,c](t_IV y) -> t_t {
@@ -320,13 +320,26 @@ public:
 
 	}
 
-	void add(std::string name, t_meaning m) {
-		interpretation_f[name] = m;
+	LexicalSemantics(
+			bool add_BFs,
+			bool add_IVs,
+			bool add_TVs,
+			bool add_DPs,
+			bool add_Qs
+		) {
+		if (add_BFs) addBFs();
+		if (add_IVs) addIVs();
+		if (add_TVs) addTVs();
+		if (add_DPs) addDPs();
+		if (add_Qs) addQs();
 	}
 
 	LexicalSemantics() {
-		// add the standard meanings
-		addDefaultLexicon();
+		addBFs();
+		addIVs();
+		addTVs();
+		addDPs();
+		addQs();
 	}
 
 	// Define .at access for the interpretation map
