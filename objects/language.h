@@ -50,7 +50,7 @@ public:
 	// Initialize the lexical meanings
 	// (this leaves the composition function
 	// still undefined)
-	LexicalSemantics() {
+	void addDefaultLexicon() {
 
 		// e are numbers
 		// there are no `t`s in the lexicon directly
@@ -58,39 +58,43 @@ public:
 
 		// t_UC
 		
-		t_UC_M l_not = 
+		add( 
+			"l_not", 
 			[](t_context c) -> t_UC {
 				return [](t_t x) -> t_t { 
 					return !x; 
 				};
-			};
-		interpretation_f["l_not"] = l_not;
+			}
+		);
 
 		// t_BC
 		
-		t_BC_M l_and =
-			[](t_context c) -> t_BC{
+		add(
+			"l_and",
+			[](t_context c) -> t_BC {
 				return [](t_t x) -> t_UC {
 					// the function is curried
 					return [x](t_t y) -> t_t { 
 						return x && y; 
 					};
 				};
-			};
-		interpretation_f["l_and"] = l_and;
+			}
+		);
 
-		t_BC_M l_or = 
-			[](t_context c) -> t_BC{
+		add(
+			"l_or",
+			[](t_context c) -> t_BC {
 				return [](t_t x) -> t_UC {
 					return [x](t_t y) -> t_t {
 						return x || y;
 					};
 				};
-			};
-		interpretation_f["l_or"] = l_or;
+			}
+		);
 		
 		// t_BC2
-		t_BC2_M l_if_else = 
+		add(
+			"l_if_else",
 			[](t_context c) -> t_BC2 {
 				return [](t_t x) -> t_BC {
 					return [x](t_t y) -> t_UC {
@@ -99,38 +103,42 @@ public:
 						};
 					};
 				};
-			};
-		interpretation_f["l_if_else"] = l_if_else;
+			}
+		);
 
 		// t_IV
-		t_IV_M positive = 
+		add(
+			"positive",
 			[](t_context c) -> t_IV {
 				return [](t_e x) -> t_t {
 					int o = std::get<0>(x);
 					return o > 0;
 				};
-			};
-		interpretation_f["positive"] = positive;
+			}
+	   	);
 
-		t_IV_M negative = 
+		add(
+			"negative",
 			[](t_context c) -> t_IV {
 				return [](t_e x) -> t_t {
 					int o = std::get<0>(x);
 					return o < 0;
 				};
-			};
-		interpretation_f["negative"] = negative;
+			}
+		);
 
-		t_IV_M even = 
+		add(
+			"even",
 			[](t_context c) -> t_IV {
 				return [](t_e x) -> t_t {
 					int o = std::get<0>(x);
 					return o % 2 == 0;
 				};
-			};
-		interpretation_f["even"] = even;
+			}
+		);
 
-		t_IV_M prime = 
+		add(
+			"prime",
 			[](t_context c) -> t_IV {
 				return [](t_e x) -> t_t {
 					int o = std::get<0>(x);
@@ -142,13 +150,14 @@ public:
 					}
 					return true;
 				};
-			};
-		interpretation_f["prime"] = prime;
+			}
+		);
 
 		// t_TV
 
 		// greater than
-		t_TV_M gt = 
+		add(
+			"gt",
 			[](t_context c) -> t_TV{
 				return [](t_e y) -> t_IV {
 					int o1 = std::get<0>(y);
@@ -157,13 +166,14 @@ public:
 						return o2 > o1;
 					};
 				};
-			};
-		interpretation_f["gt"] = gt;
+			}
+		);
 
 		// two properties are equal
 		// with respect to their content
 		// (ignores target status)
-		t_TV_M equal = 
+		add(
+			"equal",
 			[](t_context c) -> t_TV {
 				return [](t_e y) -> t_IV {
 					int o1 = std::get<0>(y);
@@ -172,10 +182,11 @@ public:
 						return o2 == o1;
 					};
 				};
-			};
-		interpretation_f["equal"] = equal;
+			}
+		);
 
-		t_TV_M divides = 
+		add(
+			"divides",
 			[](t_context c) -> t_TV {
 				return [](t_e y) -> t_IV {
 					int o1 = std::get<0>(y);
@@ -184,24 +195,25 @@ public:
 						return o2 % o1 == 0;
 					};
 				};
-			};
-		interpretation_f["divides"] = divides;
+			}
+		);
 		
 		// add (common) names for the numbers 0 to 9
 		for (int i = 0; i < 10; i++) {
-			 t_meaning intmeaning = 
+			add(
+				std::to_string(i),
 				[i](t_context c) -> t_IV {
 					return [i](t_e x) -> t_t {
 						return std::get<0>(x) == i;
 					};
-				};
-
-			interpretation_f[std::to_string(i)] = intmeaning;
+				}
+			);
 		}
 		
 		// t_DP
 		
-		t_DP_M something = 
+		add(
+			"something",
 			[](t_context c) -> t_DP {
 				return [c](t_IV x) -> t_t {
 					// loop over the domain
@@ -211,10 +223,11 @@ public:
 					}
 					return false;
 				};
-			};
-		interpretation_f["something"] = t_meaning(something);
+			}
+		);
 
-		t_DP_M everything = 
+		add(
+			"everything",
 			[](t_context c) -> t_DP {
 				return [c](t_IV x) -> t_t {
 					// loop over the domain
@@ -223,32 +236,35 @@ public:
 					}
 					return true;
 				};
-			};
-		interpretation_f["everything"] = t_meaning(everything);
+			}
+		);
 
 		// t_IV
 		
-		t_IV_M target =
+		add(
+			"target",
 			[](t_context c) -> t_IV {
 				return [](t_e x) -> t_t {
 					// check that the object is a target
 					return std::get<1>(x);
 				};
-			};
-		interpretation_f["target"] = t_meaning(target);
+			}
+		);
 
-		t_IV_M distractor =
+		add(
+			"distractor",
 			[](t_context c) -> t_IV {
 				return [](t_e x) -> t_t {
 					// check that the object is a target
 					return !std::get<1>(x);
 				};
-			};
-		interpretation_f["distractor"] = t_meaning(distractor);
-		
+			}
+		);
+
 		// t_Q
 		
-		t_Q_M every = 
+		add(
+			"every",
 			[](t_context c) -> t_Q {
 				return [c](t_IV x) -> t_DP {
 					return [x,c](t_IV y) -> t_t {
@@ -259,10 +275,11 @@ public:
 						return true;
 					};
 				};
-			};
-		interpretation_f["every"] = t_meaning(every);
+			}
+		);
 
-		t_Q_M some = 
+		add(
+			"some",
 			[](t_context c) -> t_Q {
 				return [c](t_IV x) -> t_DP {
 					return [x,c](t_IV y) -> t_t {
@@ -273,34 +290,43 @@ public:
 						return false;
 					};
 				};
-			};
-		interpretation_f["some"] = t_meaning(some);
+			}
+		);
 
-		// returns true if there is exactly one x and it is y
-		// If there is no or more than one x also returns false
-		// TODO: Implement presupposition failure
-		// in the type system
-		// It cannot be done with Empty
-		t_Q_M the = 
+		// returns true if there is exactly one x and it is y.
+		// If there is no or more than one x,
+		// throws PresuppositionFailure.
+		// otherwise returns false
+		add(
+			"the",
 			[](t_context c) -> t_Q {
 				return [c](t_IV x) -> t_DP {
 					return [x,c](t_IV y) -> t_t {
-						// if there's 0 or more than 1 x
-						// that satisfies x, throw PresuppositionFailure
-						int count = 0;
+						int count_x = 0;
 						bool found = false;
 						for (auto e : c) {
 							if (x(e) && y(e)) found = true;
-							if (x(e)) count++;
-							if (count > 1) throw PresuppositionFailure();
+							if (x(e)) count_x++;
+							if (count_x > 1) 
+								throw PresuppositionFailure();
 						}
-						if (count == 0) throw PresuppositionFailure();
+						if (count_x == 0) 
+							throw PresuppositionFailure();
 						return found;
 					};
 				};
-			};
-		interpretation_f["the"] = t_meaning(the);
-	
+			}
+		);
+
+	}
+
+	void add(std::string name, t_meaning m) {
+		interpretation_f[name] = m;
+	}
+
+	LexicalSemantics() {
+		// add the standard meanings
+		addDefaultLexicon();
 	}
 
 	// Define .at access for the interpretation map
