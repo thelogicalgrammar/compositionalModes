@@ -21,7 +21,7 @@ std::string meaningTypeToString(const t_meaning& meaning) {
             return "<s,<t,t>>";
         } else if constexpr (std::is_same_v<T, t_BC_M>) {
             return "<s,<t,<t,t>>>";
-        } else if constexpr (std::is_same_v<T, t_BC2_M>) {
+        } else if constexpr (std::is_same_v<T, t_TC_M>) {
             return "<s,<t,<t,<t,t>>>>";
         } else if constexpr (std::is_same_v<T, t_IV_M>) {
             return "<s,<e,t>>";
@@ -39,7 +39,6 @@ std::string meaningTypeToString(const t_meaning& meaning) {
     }, meaning);
 }
 
-
 // Define a class to hold the lexical meanings
 class LexicalSemantics {
 
@@ -53,13 +52,27 @@ public:
 		interpretation_f[name] = m;
 	}
 
-	// Initialize the lexical meanings
-	// (this leaves the composition function
-	// still undefined)
-	//
-	// e are numbers
-	// there are no `t`s in the lexicon directly
-	// Empty is an empty struct
+	// Add Boolean constants "true" and "false"
+	void addBCs() {
+
+		// true
+		add(
+			"true",
+			[](t_context c) -> t_t {
+				return true;
+			}
+		);
+
+		// false
+		add(
+			"false",
+			[](t_context c) -> t_t {
+				return false;
+			}
+		);
+
+	}
+
 
 	// Boolean functions
 	void addBFs() {
@@ -100,11 +113,11 @@ public:
 			}
 		);
 		
-		// t_BC2
+		// t_TC
 		
 		add(
 			"l_if_else",
-			[](t_context c) -> t_BC2 {
+			[](t_context c) -> t_TC {
 				return [](t_t x) -> t_BC {
 					return [x](t_t y) -> t_UC {
 						return [x,y](t_t z) -> t_t {
@@ -321,12 +334,14 @@ public:
 	}
 
 	LexicalSemantics(
+			/* bool add_BCs, */
 			bool add_BFs,
 			bool add_IVs,
 			bool add_TVs,
 			bool add_DPs,
 			bool add_Qs
 		) {
+		/* if (add_BCs) addBCs(); */
 		if (add_BFs) addBFs();
 		if (add_IVs) addIVs();
 		if (add_TVs) addTVs();
@@ -335,6 +350,7 @@ public:
 	}
 
 	LexicalSemantics() {
+		/* addBCs(); */
 		addBFs();
 		addIVs();
 		addTVs();
@@ -448,11 +464,12 @@ public:
 	// Compose method
 	// which evaluates the BTC
 	// into a t_meaning object
-    t_meaning compose(t_BTC_compose composition_fn) {
+    t_meaning compose(t_BTC_compose composition_fn) const {
         if (std::holds_alternative<t_meaning>(data)) {
             // If it's a terminal, just return it as is
             return std::get<t_meaning>(data);
         } else {
+			
             // If it's a BTC with children,
 			// recursively apply composition_fn to its children
             auto& children = std::get<Children>(data);
@@ -518,7 +535,7 @@ public:
             std::string rightExpr = children.right ?
 				children.right->toSExpression() : 
 				"";
-            return "(" + leftExpr + " " + rightExpr + ")";
+            return "( " + leftExpr + " " + rightExpr + " )";
         }
     }
 

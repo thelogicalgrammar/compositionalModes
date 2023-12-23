@@ -102,16 +102,23 @@ private:
 			// a string describing the type of the node
 			// (a key in cdfMap)
 			std::string typeName,
+			int maxDepth,
 			// CFG map from each type 
 			// to the types that can be composed with it
 			// (this is inferred from the composition function)
 			// where types are represented as strings
-			int maxDepth,
 			const t_cfgMap& cfgMap,
 			// rng is a random number generator
 			std::mt19937& rng
 		) {
-	
+
+		if (maxDepth < 0) {
+			// without this some grammars get stuck in a loop
+			// alternating between creating new leafs and 
+			// returning nullptr
+			return std::nullopt;
+		}
+
 		// is typeName not in the terminals map?
 		bool noterminal = 
 			terminalsMap.find(typeName) == terminalsMap.end();
@@ -135,7 +142,7 @@ private:
 			// if there is no terminal of the given type,
 			// always create a branching
 			createLeaf = false;
-		} else if (maxDepth <= 0 || nocfg) {
+		} else if (maxDepth == 0 || nocfg) {
 			// if we are at the maximum depth
 			// (we can also exceed it if there were no terminals to choose from)
 			// or if there are no possible compositions,
@@ -230,18 +237,7 @@ public:
 		// For convenience, we can decide whether
 		// to include each type of meaning from the
 		// default lexicon.
-		lex = LexicalSemantics(
-			// BFs
-			true,
-			// IVs
-			true,
-			// TVs
-			true,
-			// DPs
-			true,
-			// Qs
-			true
-		);
+		lex = LexicalSemantics();
 		// initialize the terminals map
 		// which is a map from each type to the terminals of that type
 		terminalsMap = generateTerminalsMap();
@@ -263,57 +259,69 @@ public:
 	// Encoding (an approximation of)
 	// the probability of producing
 	// each sentence in the given context
-	t_BTC_dist produce(
+	std::optional<t_BTC_dist> produce(
 			t_context c, 
 			t_BTC_compose compositionFn,
 			std::mt19937& rng
 		){
-		// Considers a bunch of random utterances
-		// that are all true of the context
-		t_BTC_vec sentences = 
-			generateRandomBTCsWithEvaluation(
-				c, compositionFn, rng
-			);
-
-		// Calculates the utility of each sentence
-		std::vector<double> utilities;
-		for (auto& s : sentences) {
-			t_t_M meaning = std::get<t_t_M>(
-				s->compose(compositionFn)
-			);
-			// compute informativity
-			double info =
-				this->computeInformativity(
-					c, meaning
+			// Considers a bunch of random utterances
+			// that are all true of the context
+			t_BTC_vec sentences = 
+				generateRandomBTCsWithEvaluation(
+					c, compositionFn, rng
 				);
-			// compute complexity (divide by 4 
-			// to make more comparable with info);
-			double complexity = 
-				this->computeComplexity(*s)*this->sizeScaling;
 
-			double utility = std::exp(this->alpha*(
-				info - complexity
-			));
+		if (sentences.size() == 0) {
+			// If the composition function cannot produce 
+			// sentences that are true of the context
+			// (e.g., randomly initialized composition function)
+			return std::nullopt;
 
-			/* s->printTree(this->lex); */
-			/* std::cout << "info: " << info << std::endl; */
-			/* std::cout << "comp: " << complexity << std::endl; */
-			/* std::cout << utility << std::endl; */
-			/* std::cout << std::endl; */
+		} else {
 
-			// Since this ends up as parameter to a 
-			// discrete distribution, we don't need to
-			// normalize.
-			utilities.push_back(utility);
+			// Calculates the utility of each sentence
+			std::vector<double> utilities;
+			for (auto& s : sentences) {
+
+				t_t_M meaning = std::get<t_t_M>(
+					s->compose(compositionFn)
+				);
+
+				// compute informativity
+				double info =
+					this->computeInformativity(
+						c, meaning
+					);
+				// compute complexity (divide by 4 
+				// to make more comparable with info);
+				double complexity = 
+					this->computeComplexity(*s)*this->sizeScaling;
+
+				double utility = std::exp(this->alpha*(
+					info - complexity
+				));
+
+				/* s->printTree(this->lex); */
+				/* std::cout << "info: " << info << std::endl; */
+				/* std::cout << "comp: " << complexity << std::endl; */
+				/* std::cout << utility << std::endl; */
+				/* std::cout << std::endl; */
+
+				// Since this ends up as parameter to a 
+				// discrete distribution, we don't need to
+				// normalize.
+				utilities.push_back(utility);
+			}
+
+			// Selects an informative and simple utterance
+			t_discr_dist dist(utilities.begin(),utilities.end());
+
+			return std::make_tuple(
+				std::move(sentences),
+				dist
+			);
+
 		}
-
-		// Selects an informative and simple utterance
-		t_discr_dist dist(utilities.begin(),utilities.end());
-
-		return std::make_tuple(
-			std::move(sentences),
-			dist
-		);
 	}
 
 	// Goes from a sentence to the probability
@@ -427,7 +435,7 @@ public:
 			t_t_M{}, 
 			t_UC_M{},
 			t_BC_M{},
-			t_BC2_M{},
+			t_TC_M{},
 			t_IV_M{},
 			t_DP_M{},
 			t_TV_M{},
