@@ -49,7 +49,7 @@ struct Empty {};
 // the meaning function cannot be applied to the given input.
 // Can also be raised during composition.
 struct PresuppositionFailure : public std::exception {
-    const char* what() const throw() {
+    const char* what() const noexcept override {
         return "Presupposition failure occurred";
     }
 };
@@ -108,12 +108,9 @@ using t_BTC_transform =
 using t_BTC_PtoE =
 	std::function<t_e(t_context,t_IV_M)>;
 using t_BTC_chooseF =
-	std::function< t_BTC_PtoE(int) >;
+	std::function<t_BTC_PtoE(int)>;
 using t_TandTtoT = 
 	std::function<t_t(t_t,t_t)>;
-
-using t_input = 
-	std::tuple<t_meaning,t_meaning>;
 
 // Some useful distributions
 using t_intdist = std::uniform_int_distribution<int>;
@@ -137,3 +134,12 @@ using t_terminalsMap =
 	>;
 
 using t_contextVector = std::vector<t_context>;
+
+// Define types for IL
+using twoDDouble = std::vector<std::vector<double>>;
+
+enum class HypothesisInitialization {
+	HYPOTHESIS,
+	RANDOMSTRING
+};
+

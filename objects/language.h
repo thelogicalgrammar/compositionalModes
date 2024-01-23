@@ -73,7 +73,6 @@ public:
 
 	}
 
-
 	// Boolean functions
 	void addBFs() {
 
@@ -341,7 +340,6 @@ public:
 			bool add_DPs,
 			bool add_Qs
 		) {
-		/* if (add_BCs) addBCs(); */
 		if (add_BFs) addBFs();
 		if (add_IVs) addIVs();
 		if (add_TVs) addTVs();
@@ -350,7 +348,6 @@ public:
 	}
 
 	LexicalSemantics() {
-		/* addBCs(); */
 		addBFs();
 		addIVs();
 		addTVs();
@@ -368,6 +365,16 @@ public:
         // Handle the case where the key is not found
         // throw std::runtime_error("Key not found");
 		throw std::runtime_error("Key not found: " + name);	
+	}
+
+	std::vector<std::string> getNames() const {
+		std::vector<std::string> names;
+		for (
+			auto it = interpretation_f.begin(); 
+			it != interpretation_f.end();
+			++it
+		){names.push_back(it->first);}
+		return names;
 	}
 
 	///// For looping
@@ -513,11 +520,44 @@ public:
         }
     }
 
+	// Generate random S-expression
+	static std::string randomSExpression(
+			std::vector<std::string>& names,
+			std::mt19937& rng,
+			int depth = 0, 
+			int maxDepth = 3
+		) {
+		std::uniform_int_distribution<> dist(0, names.size() - 1);
+		// Decide between leaf or internal node
+		std::uniform_int_distribution<> decide(0, 1); 
+
+		if (depth >= maxDepth || decide(rng) == 0) {
+			// Leaf node case
+			int index = dist(rng);
+			return names[index];
+		} else {
+			// Recursive case: internal node
+			std::string leftExpr = randomSExpression(
+				names,
+				rng,
+				depth + 1,
+				maxDepth
+			);
+			std::string rightExpr = randomSExpression(
+				names,
+				rng,
+				depth + 1,
+				maxDepth
+			);
+			return "( " + leftExpr + " " + rightExpr + " )";
+		}
+	}
+
 	// Static method to create a BTC tree from an S-expression
     static std::unique_ptr<BTC> fromSExpression(
 			const std::string& sExpr,
 			LexicalSemantics& lex
-			) {
+		) {
 
         std::istringstream ss(sExpr);
         return parseAndBuild(ss, lex);

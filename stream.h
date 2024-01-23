@@ -68,6 +68,26 @@ std::ostream& operator<<(std::ostream& os, const t_cfgMap& cfg) {
     return os;
 }
 
-
 /* std::ostream& operator<<( */
 /* 		std::ostream& os, const */ 
+
+void writeCsv(
+		const std::string& filename,
+		const std::vector<std::vector<double>>& data) {
+	// I need to save the following information 
+	// for each agent in each generation:
+	// - index of agent in generation
+	// - communicative accuracy of agent's language
+	// - hypothesis (as a readable string)
+	// - hypothesis (as a string parseable by the grammar)
+	// - data produced by agent
+	// - index of parent in previous generation
+	std::ofstream file(filename);
+	for (auto& row : data) {
+		for (auto& e : row) {
+			file << e << ", ";
+		}
+		file << std::endl;
+	}
+	file.close();
+}

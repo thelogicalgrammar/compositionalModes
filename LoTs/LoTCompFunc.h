@@ -1,5 +1,8 @@
 # pragma once
 
+using t_input = 
+	std::tuple<t_meaning,t_meaning>;
+
 // Here I define the functions for the LoT fragment
 // that encodes rules for composing *meanings*.
 // This is an intensional composition, so it 
@@ -15,7 +18,7 @@ template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 // NOTE: it cannot be done easily because we cannot "look"
 // into the type of the extension easily
 // (There's probably some more elegant way to do this but it 
-// would require a restructuring of the way meanings are represented)
+// might require a restructuring of the way meanings are represented)
 template <typename T, typename U> struct accepts_arg : std::false_type {};
 template <> struct accepts_arg< t_UC_M, t_t_M> :  std::true_type {};
 template <> struct accepts_arg< t_BC_M, t_t_M> :  std::true_type {};
@@ -24,14 +27,35 @@ template <> struct accepts_arg< t_IV_M, t_e_M> :  std::true_type {};
 template <> struct accepts_arg< t_DP_M, t_IV_M>:  std::true_type {};
 template <> struct accepts_arg< t_TV_M, t_e_M> :  std::true_type {};
 template <> struct accepts_arg< t_Q_M,  t_IV_M>:  std::true_type {};
-template <typename T, typename U>
 // this is a helper variable template
+template <typename T, typename U>
 inline constexpr bool accepts_arg_v = accepts_arg<T, U>::value;
 
-// apply needs to return a t_meaning
-// which is a function from a context to a specific extension type
-// But since we don't know what the extension type is in advance
-// we need to treat each case separately
+
+// OLD COMPOSE STUFF
+/* #include <concepts> */
+/* template<typename F, typename Arg> */
+/* concept CallableWith = requires(F f, Arg arg) { */
+/*     { f(arg) }; */
+/* }; */
+// This is done to record for which combinations of meanings
+// can be composed. 
+// For each type T with output type t, 
+// find all the types U with input type t
+/* template <typename T, typename U> struct can_compose : std::false_type {}; */
+/* template <> struct can_compose< t_UC_M, t_UC_M> :  std::true_type {}; */
+/* template <> struct can_compose< t_BC_M, t_UC_M> :  std::true_type {}; */
+/* template <> struct can_compose< t_TC_M, t_UC_M> :  std::true_type {}; */
+/* template <> struct can_compose< t_UC_M, t_IV_M> :  std::true_type {}; */
+/* template <> struct can_compose< t_UC_M, t_DP_M> :  std::true_type {}; */
+/* template <> struct can_compose< t_BC_M, t_IV_M> :  std::true_type {}; */
+/* template <> struct can_compose< t_BC_M, t_DP_M> :  std::true_type {}; */
+/* template <> struct can_compose< t_TC_M, t_IV_M> :  std::true_type {}; */
+/* template <> struct can_compose< t_TC_M, t_DP_M> :  std::true_type {}; */
+/* template <> struct can_compose< t_DP_M, t_TV_M> :  std::true_type {}; */
+/* template <> struct can_compose< t_Q_M, t_TV_M > :  std::true_type {}; */
+/* template <typename T, typename U> */
+/* inline constexpr bool can_compose_v = can_compose<T, U>::value; */
 
 // Here I define the DSL for the language
 // that encodes the *composition* function
@@ -46,19 +70,20 @@ namespace COMP_DSL{
 			// meanings are a function from a context
 			// to one of the possible extensions
 			return std::visit(
-				// The types of f and arg here 
-				// are specific meanings 
-				// in the variant t_meaning
-				// e.g., t_t_M, t_UC_M, etc.
 				[](auto&& f, auto&&arg) -> t_meaning {
+					// The types of f and arg here 
+					// are specific meanings 
+					// in the variant t_meaning
+					// e.g., t_t_M, t_UC_M, etc.
 					using T = std::decay_t<decltype(f)>;
 					using U = std::decay_t<decltype(arg)>;
 					// Create a new meaning, 
 					// i.e., a function from a context 
 					// to an extension.
 					if constexpr (accepts_arg_v<T,U>) {
-						return [f,arg](t_context c) 
-							-> auto {return f(c)(arg(c));};
+						return [f,arg](t_context c) -> auto {
+							return f(c)(arg(c));
+						};
 					} else {
 						// If the meaning cannot be applied
 						// to the argument, return an empty meaning
@@ -102,6 +127,16 @@ namespace COMP_DSL{
 	auto is_TV_M = is_T<t_TV_M>;
 	auto is_Q_M  = is_T<t_Q_M>;
 
+	// If the first bit doesn't compose, go to the second
+	std::function<t_meaning(t_meaning,t_meaning)> Else =
+		+[](t_meaning m1, t_meaning m2) -> t_meaning {
+			if (std::holds_alternative<Empty_M>(m1)) {
+				return m2;
+			} else {
+				return m1;
+			}
+		};
+
 	std::function<t_meaning(bool,t_meaning,t_meaning)> ifElseMeaning = 
 		+[](bool b, t_meaning m1, t_meaning m2) -> t_meaning {
 			if (b) {
@@ -117,8 +152,7 @@ namespace COMP_DSL{
 	// which given a context returns an entity.
 	// If the input meaning does not pick out any property in the context,
 	// it throws a PresuppositionFailure exception.
-	std::function<t_meaning(t_meaning, t_BTC_PtoE)> 
-	getEntity = 
+	std::function<t_meaning(t_meaning, t_BTC_PtoE)> getEntity = 
 		+[](t_meaning meaning, t_BTC_PtoE f) -> t_meaning { 
 			return std::visit(
 				[f](auto&& m) -> t_meaning {
@@ -236,7 +270,7 @@ namespace COMP_DSL{
 		};
 
 	t_BTC_transform propComplement = 
-		+[](t_meaning m) -> t_meaning {
+		+[](t_meaning meaning) -> t_meaning {
 			t_meaning out = t_meaning(
 				std::visit(
 					[](auto&& m) -> t_meaning {
@@ -246,21 +280,185 @@ namespace COMP_DSL{
 								t_IV mc = m(c);
 								// an IV is a function from entities 
 								// to truth values
-								t_IV out = 
+								t_IV returnvalue = 
 									[mc](t_e e) -> t_t {return !mc(e);};
-								return out;
+								return returnvalue;
 							});
 						} else {
 							return t_meaning(Empty_M());
 						}
 					},
-					m
+					meaning
 				)
 			);
 			return out;
 		};
 
+	// Existential closure
+	// Check if an entity satisfies a property
+	std::function<t_meaning(t_meaning)> exClosure = 
+		+[](t_meaning meaning) -> t_meaning {
+			t_meaning out = t_meaning(
+				std::visit(
+					[](auto&& m) -> t_meaning {
+						using T = std::decay_t<decltype(m)>;
+						if constexpr (std::is_same_v<T,t_IV_M>) {
+							return [m](t_context c) -> t_t {
+								t_IV mc = m(c);
+								// an IV is a function from entities
+								// to truth values
+								t_t returnvalue = false;
+								for (auto e : c) {
+									if (mc(e)) {
+										returnvalue = true;
+										break;
+									}
+								}
+								return returnvalue;
+							};
+						} else {
+							return t_meaning(Empty_M());
+						}
+					},
+					meaning
+				)
+			);
+			return out;
+		};
+
+	// Go from an entity to a property that is true of that entity
+	std::function<t_meaning(t_meaning)> abstractE = 
+		+[](t_meaning meaning) -> t_meaning {
+			t_meaning out = t_meaning(
+				std::visit(
+					[](auto&& m) -> t_meaning {
+						using T = std::decay_t<decltype(m)>;
+						if constexpr (std::is_same_v<T,t_e_M>) {
+							return [m](t_context c) -> t_IV {
+								t_e me = m(c);
+								// an IV is a function from entities
+								// to truth values
+								t_IV returnvalue = 
+									[me](t_e e) -> t_t {return e == me;};
+								return returnvalue;
+							};
+						} else {
+							return t_meaning(Empty_M());
+						}
+					},
+					meaning
+				)
+			);
+			return out;
+		};
+
+	t_BTC_compose propDifference =
+		+[](t_meaning leftM, t_meaning rightM) -> t_meaning {
+			return std::visit(
+				[](auto&& m1, auto&& m2) -> t_meaning {
+					using T = std::decay_t<decltype(m1)>;
+					using U = std::decay_t<decltype(m2)>;
+					// If both meanings are properties
+					if constexpr (
+						std::is_same_v<T,t_IV_M> && 
+						std::is_same_v<U,t_IV_M>
+					) {
+						// return a meaning that is a function
+						// from a context to a property
+						t_IV_M outM = [m1,m2](t_context c) -> t_IV {
+							t_IV mc1 = m1(c);
+							t_IV mc2 = m2(c);
+							return t_IV(
+								[mc1,mc2,c](t_e e) -> t_t {
+									return mc1(e) && !mc2(e);
+								}
+							);
+						};
+						return t_meaning(outM);
+					} else {
+						return t_meaning(Empty_M());
+					}
+				},
+				leftM, rightM
+			);
+		};
+
+	t_BTC_compose propInclusion =
+		+[](t_meaning leftM, t_meaning rightM) -> t_meaning {
+			return std::visit(
+				[](auto&& m1, auto&& m2) -> t_meaning {
+					using T = std::decay_t<decltype(m1)>;
+					using U = std::decay_t<decltype(m2)>;
+					// If both meanings are properties
+					if constexpr (
+						std::is_same_v<T,t_IV_M> && 
+						std::is_same_v<U,t_IV_M>
+					) {
+						t_t_M outM = [m1,m2](t_context c) -> t_t {
+							t_IV mc1 = m1(c);
+							t_IV mc2 = m2(c);
+							bool out = true;
+							for (auto e : c) {
+								if (mc1(e) && !mc2(e)) {
+									out = false;
+									break;
+								}
+							}
+							return out;
+						};
+						return t_meaning(outM);
+					} else {
+						return t_meaning(Empty_M());
+					}
+				},
+				leftM, rightM
+			);
+		};
+	
+	// functional composition
+	/* t_BTC_compose fcompose = 
+		+[]( t_meaning leftM, t_meaning rightM) -> t_meaning {
+		return std::visit(
+			[](auto&& f, auto&& g) -> t_meaning {
+				using T = std::decay_t<decltype(f)>;
+				using U = std::decay_t<decltype(g)>;
+				// If both meanings are functions
+				if constexpr (can_compose_v<T,U>) {
+					// return a meaning that is a function
+					// from a context to the composed function
+					return [f,g](t_context c) -> auto {
+						// Return the composed function
+						// (e should be the input type to f(c))
+						return [f,g,c](auto e) -> auto {
+							auto fc = f(c);
+							auto gc = g(c);
+							// If the composed function is callable
+							if constexpr ( 
+									CallableWith<decltype(fc),decltype(e)>
+								) {
+								auto fce = fc(e);
+								if constexpr ( 
+										CallableWith<decltype(gc),decltype(fce)>
+									) {
+									return gc(fce);
+								} else {
+									return t_meaning(Empty_M());
+								}
+							} else {
+								return t_meaning(Empty_M());
+							}
+						};
+					};
+				} else {
+					return t_meaning(Empty_M());
+				}
+			},
+			leftM, rightM
+		);
+	}; */
+	
 }
+
 
 // Define CompGrammar
 class CompGrammar : public Grammar< 
@@ -304,39 +502,97 @@ public:
 
 		using namespace COMP_DSL;
 
-		add("( %s %s )", 		rapply			, 0.2);
-		add("( flipArgs %s )", 	flipArgs		, 0.2);
-		add("( tuple %s %s )", 	buildTuple		, 0.2);
-		add("( if %s %s %s )", 	ifElseMeaning	, 0.2);
-		add("( getE %s %s )", 	getEntity		, 0.2);
-		add("( nTh %s )", 		nThInContext	, 0.2);
-		add("( pAND %s %s )", 	propIntersection, 0.2);
-		add("( pOR %s %s  )",	propUnion		, 0.2);
-		add("( pNOT %s )", 		propComplement	, 0.2);
+		// (t_meaning, t_meaning) -> t_meaning
+		add("( Else %s %s )", 	Else			, 2.0);
+		add("( %s %s )", 		rapply			, 0.1);
+		add("( exClosure %s )", exClosure		, 0.1);
+		add("( pAND %s %s )", 	propIntersection, 0.1);
+		add("( pOR %s %s  )",	propUnion		, 0.1);
+		add("( dDIFF %s %s )", 	propDifference	, 0.1);
+		/* add("( compose %s %s )",compose			, 0.1); */
+		// pINC tends to be used too much
+		/* add("( pINC %s %s )", 	propInclusion	, 0.1); */
 
-		add_terminal("true",  true);
-		add_terminal("false", false);
+		// t_input -> t_input
+		add("( flipArgs %s )", 	flipArgs		, 0.1);
 
+		// (t_meaning,t_meaning) -> t_input
+		add("( tuple %s %s )", 	buildTuple		, 0.1);
+
+		// (t_meaning, ( (t_context, t_IV_M) -> t_e ) ) -> t_meaning
+		add("( getE %s %s )", 	getEntity		, 0.1);
+
+		// int -> ( (t_context, t_IV_M) -> t_e )
+		add("( nTh %s )", 		nThInContext	, 0.1);
+
+		// t_meaning -> t_meaning
+		add("( pNOT %s )", 		propComplement	, 0.1);
+		add("( abstractE %s )", abstractE		, 0.1);
+
+		// (t_meaning, t_meaning, t_meaning) -> t_meaning
+		add("( if %s %s %s )", 	ifElseMeaning	, 0.1);
+
+		// t_input
+		add("X",				
+			Builtins::X<CompGrammar>, 4);
+		
+		// t_input -> t_meaning
+		add("%s.L",				
+			+[](t_input i) -> t_meaning {return std::get<0>(i);});
+		add("%s.R",				
+			+[](t_input i) -> t_meaning {return std::get<1>(i);});
+
+		// ints
 		// Implement a simple base-10 encoding for integers
 		/* add("(%s + %s)", */    
 		/* 	+[](int s, int n) -> int { return s + n; }); */
 		/* add("tens(%s)", */    
 		/* 	+[](int n) -> int {return n*10; }); */
 		for(int i=1;i<=10;i++) {
-			add_terminal( "#"+str(i), i, 0.1);
+			add_terminal( "#"+str(i), i, 0.05);
 		}
+
+		// (int, int) -> bool
+		add("( intEq %s %s )", 
+			+[](int i1, int i2) -> bool {return i1 == i2;});
+		add("( intLt %s %s )",
+			+[](int i1, int i2) -> bool {return i1 < i2;});
+
+		// int -> t_meaning
+		// return a t_meaning containing a <et,t> (i.e., a DP)
+		// that returns true if the number of entities in the context
+		// that satisfy the input meaning is equal to the input integer
+		add("( card %s )",
+			+[](int i) -> t_meaning {
+				return [i](t_context c) -> t_DP {
+					return [c,i](t_IV x) -> t_t {
+						int count = 0;
+						for (auto e : c) {
+							if (x(e)) {
+								count++;
+							}
+						}
+						return count == i;
+					};
+				};
+			}
+		);
 		
-		// Add boolean constants
+		// bool
 		add_terminal("true",  true);
 		add_terminal("false", false);
+
+		// bool -> bool
 		add("( not %s )", 
 			+[](bool b) -> bool {return !b;});
+		
+		// (bool, bool) -> bool
 		add("( and %s %s )",
 			+[](bool b1, bool b2) -> bool {return b1 && b2;});
 		add("( or %s %s )",
 			+[](bool b1, bool b2) -> bool {return b1 || b2;});
 
-		// Functions to check for specific types
+		// t_meaning -> bool
 		add("( is_t %s )" , is_t_M,  0.1);
 		add("( is_e %s )" , is_e_M,  0.1);
 		add("( is_UC %s )", is_UC_M, 0.1);
@@ -347,13 +603,10 @@ public:
 		add("( is_TV %s )", is_TV_M, 0.1);
 		add("( is_Q %s )" , is_Q_M,  0.1);
 
-		// Get left and right argument meanings
-		add("X",				
-			Builtins::X<CompGrammar>, 5);
-		add("%s.L",				
-			+[](t_input i) -> t_meaning {return std::get<0>(i);});
-		add("%s.R",				
-			+[](t_input i) -> t_meaning {return std::get<1>(i);});
+		// Seems to be extreeeeemely slow
+		// and sometimes kills the process
+		/* add("recurse(%s)", */ 
+		/* 	Builtins::Recurse<CompGrammar>, 1); */
 
 	}
 } grammar;
@@ -366,8 +619,12 @@ class MyHypothesis final : public DeterministicLOTHypothesis<
 	t_meaning,
 	CompGrammar,
 	&grammar,
-	defaultdatum_t<std::tuple<t_context,LexicalSemantics>,std::string>
+	defaultdatum_t<t_context,std::string>
 	> {
+
+private:
+
+	LexicalSemantics lexSem = LexicalSemantics();
 
 public:
 	using Super = DeterministicLOTHypothesis<
@@ -376,33 +633,45 @@ public:
 		t_meaning,
 		CompGrammar,
 		&grammar,
-		defaultdatum_t<std::tuple<t_context,LexicalSemantics>,std::string>
+		defaultdatum_t<t_context,std::string>
 		>;
 	using Super::Super; 
-	
+
+	// NOTE //
+	// lexSem, compositionF, and getLexicon 
+	// need to be defined so it can be used by the agent
+	// e.g., when producing a signal
+
+	t_BTC_compose getCompositionF() {
+		return 
+			[this](t_meaning m1, t_meaning m2) -> t_meaning {
+				// put the meanings in a tuple
+				t_input m = std::make_tuple(m1,m2);
+				return this->call(m);
+			};
+	}
+
+	LexicalSemantics getLexicon() {
+		// For this grammar, 
+		// the lexicon is the same for all hypotheses
+		return lexSem;
+	}
+
 	double compute_single_likelihood(const datum_t& x) override {
 
 		// context is the first element of the input
-		t_context context = std::get<0>(x.input);
-
-		// LexicalSemantics is the second element of the input
-		LexicalSemantics lexSem = std::get<1>(x.input);
+		t_context context = x.input;
 
 		// output: a SExpr representation of the parseTree 
 		const std::unique_ptr<BTC> parseTree = 
 			BTC::fromSExpression(x.output,lexSem);
 
 		// call takes an input and returns a meaning
-		t_BTC_compose
-		compositionF = [this](t_meaning m1, t_meaning m2) -> t_meaning {
-			// put the meanings in a tuple
-			t_input m = std::make_tuple(m1,m2);
-			return this->call(m);
-		};
+		t_BTC_compose compF = getCompositionF();
 
 		try{
 			// outputMeaning will contain type t_t_M
-			t_meaning outputMeaning = parseTree->compose(compositionF);
+			t_meaning outputMeaning = parseTree->compose(compF);
 			try 
 			{
 				auto f = std::get<t_t_M>(outputMeaning); 
@@ -411,6 +680,7 @@ public:
 					out
 					? log(x.reliability + (1.0-x.reliability)/2.0) 
 					: log((1.0-x.reliability)/2.0);
+
 				return logp;
 			}
 			catch (std::bad_variant_access&) 

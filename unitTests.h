@@ -94,3 +94,35 @@
 	for (auto& p : probs) {
 		std::cout << p << " ";
 	}
+
+	///// LEARN A COMPOSITION FUNCTION
+
+	/* t_BTC_compose trueComposeF = COMP_DSL::rapply; */
+
+	Agent<MyHypothesis> speaker = 
+		Agent<MyHypothesis>();
+
+	MyHypothesis::data_t mydata;
+	MyHypothesis trueH;
+
+	auto maybedata = initialProduceData(speaker, rng);
+	trueH = std::get<0>(maybedata);
+	mydata = std::get<1>(maybedata);
+
+	// top stores the top hypotheses we have found
+	TopN<MyHypothesis> top;
+	
+	auto h0 = MyHypothesis::sample();
+	ParallelTempering samp(
+		h0,
+		&mydata,
+		FleetArgs::nchains,
+		10.0
+	); 
+	for(auto& h : samp.run(Control(100000)) | top | printer(FleetArgs::print)){
+		top << h;
+	}
+	
+	std::cout << "Best hypothesis: " << std::endl;
+	// Show the best we've found
+	top.print();

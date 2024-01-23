@@ -6,7 +6,7 @@
 // where each object is a tuple (int,bool)
 // NOTE: Ints must be unique!
 t_context generateContext(
-		int size,
+		size_t size,
 		std::mt19937& rng
 	){
 
@@ -26,4 +26,18 @@ t_context generateContext(
 	}
 
 	return context;
+}
+
+std::vector<t_context> generateContexts(
+		size_t size,
+		// number of contexts to generate
+		size_t num,
+		std::mt19937& rng
+	){
+
+	std::vector<t_context> contexts;
+	for (size_t i = 0; i < num; ++i) {
+		contexts.push_back(generateContext(size, rng));
+	}
+	return contexts;
 }
