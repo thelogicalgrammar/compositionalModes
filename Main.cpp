@@ -33,14 +33,14 @@
 // Overloaded operators for printing
 #include "stream.h"
 // The basic lexical semantics. NOTE: No composition function here!
-#include "objects/Language.h"
+#include "objects/language.h"
 // The world that produces the context
-#include "objects/World.h"
+#include "objects/world.h"
 // Grammar and Hypothesis for the parts of language to infer
 /* #include "LoTs/LoTCompFunc.h" */
 #include "LoTs/LoTQuantifiers.h"
 // The agents that produce, interpret, and learn
-#include "objects/Agent.h"
+#include "objects/agent.h"
 
 // Implementation of iterated learning
 #include "objects/IL.h"
