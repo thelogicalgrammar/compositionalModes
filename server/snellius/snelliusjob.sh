@@ -11,7 +11,7 @@ module load Eigen/3.4.0-GCCcore-11.3.0
 module load binutils/2.38-GCCcore-11.3.0
 
 # Compile script
-cd ../
+cd ../../
 make
 # Execute script 
 ./main \
