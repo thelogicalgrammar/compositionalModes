@@ -26,7 +26,7 @@
 #include "ParallelTempering.h"
 #include "Fleet.h"
 
-// Model stuff //
+// Model stuff 
 
 // The various abbreviations for types
 #include "types.h"
