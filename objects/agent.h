@@ -59,6 +59,7 @@ private:
 	double sizeScaling;
 	// top stores the top hypotheses we have found
 	TopN<Hyp> top{size_t{100}};
+	bool hasTop = false;
 	// the chosen hypothesis
 	Hyp chosenHyp;
 	bool hasChosenHyp = false;
@@ -264,6 +265,9 @@ public:
 	}
 
 	TopN<Hyp> getTop() {
+		if (!hasTop) {
+			throw std::runtime_error("No top defined!");
+		}
 		return this->top;
 	}
 
@@ -390,9 +394,16 @@ public:
 			cumCA += CA;
 
 			for (auto elem : datum.input) {
-				std::cout << "(" << std::get<0>(elem) << ", " << std::get<1>(elem) << ") ";
+				std::cout 
+					<< "(" 
+					<< std::get<0>(elem) 
+					<< ", " 
+					<< std::get<1>(elem) 
+					<< ") ";
 			}
-			std::cout << "->" << datum.output << "		: ";
+			std::cout 
+				<< "->" 
+				<< datum.output << "		: ";
 			for (auto p : probs) {
 				std::cout << p << " ";
 			}
@@ -496,7 +507,11 @@ public:
 		){
 
 		// Use the chosen hypothesis by default
-		return produce(chosenHyp, c, rng);
+		return produce(
+			this->getHypothesis(),
+			c,
+			rng
+		);
 	}
 
 	std::optional<std::string> produceSingleString(
@@ -604,7 +619,11 @@ public:
 			std::unique_ptr<BTC>& s,
 			t_context observedC
 		){
-		return interpret(s, observedC, chosenHyp.getCompositionF());
+		return interpret(
+			s,
+			observedC,
+			this->getHypothesis().getCompositionF()
+		);
 	}
 
 	std::vector<double> interpret(
@@ -612,13 +631,15 @@ public:
 			t_context observedC
 		){
 		// by default, use the chosen hypothesis
-		LexicalSemantics lex = chosenHyp.getLexicon();
+		LexicalSemantics lex = this->getHypothesis().getLexicon();
 		// get the sentence
 		std::unique_ptr<BTC> sentence = BTC::fromSExpression(s, lex);
 		return interpret(sentence, observedC);
 	}
 	
 	void learn(Hyp::data_t data){
+
+		assert(!hasTop&&"Top already defined!");
 		
 		auto h0 = Hyp::sample();
 		ParallelTempering samp(
@@ -638,6 +659,7 @@ public:
 			// Add hypothesis to top
 			top << h;
 		}
+		hasTop = true;
 
 	}
 
@@ -645,11 +667,12 @@ public:
 
 		// sample one hypothesis from the posterior in top
 
+		TopN<Hyp> localtop = getTop();
 		std::cout << "About to pick!" << std::flush;
-		assert(top.size() > 0);
+		assert(localtop.size() > 0);
 
 		// get the posterior
-		auto posterior = top.values();
+		auto posterior = localtop.values();
 
 		// get the unnormalized probabilities
 		std::vector<double> probs;
@@ -673,8 +696,16 @@ public:
 	}
 
 	void setHypothesis(Hyp h){
+		if (hasChosenHyp) {
+			std::cout << "WARNING: Overwriting chosen hypothesis!" << std::endl;
+		}
 		chosenHyp = h;
 		hasChosenHyp = true;
+	}
+
+	Hyp getHypothesis(){
+		assert(hasChosenHyp&&"No hypothesis has been chosen!");
+		return chosenHyp;
 	}
 	
 	// This function takes a lexical semantics

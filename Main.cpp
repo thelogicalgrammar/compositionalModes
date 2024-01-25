@@ -5,6 +5,7 @@
 #include <functional>
 #include <iostream>
 #include <ostream>
+#include <filesystem>
 #include <sstream>
 #include <stdexcept>
 #include <set>
@@ -40,9 +41,9 @@
 #include "LoTs/LoTQuantifiers.h"
 // The agents that produce, interpret, and learn
 #include "objects/Agent.h"
+
 // Implementation of iterated learning
 #include "objects/IL.h"
-
 
 enum class SimulationType {
 	TESTGRAMMAR,
@@ -55,6 +56,48 @@ int main(int argc, char** argv) {
 	// default include to process a bunch of global variables: 
 	// mcts_steps, mcc_steps, etc
 	Fleet fleet("Modes of composition");
+
+	// Adding some command line options
+	// that I need below
+	size_t nGenerations = 5;
+	size_t nAgents 		= 10;
+	size_t nObs 		= 100;
+	size_t cSize 		= 5;
+	double pRight 		= 0.9999;
+	std::string fnameAddition = "";
+
+	fleet.add_option<size_t>(
+		"--ngenerations",
+		nGenerations,
+		"Number of generations"
+	);
+	fleet.add_option<size_t>(
+		"--nagents",
+		nAgents,
+		"Number of agents"
+	);
+	fleet.add_option<size_t>(
+		"--nobs",
+		nObs,
+		"Number of observations"
+	);
+	fleet.add_option<size_t>(
+		"--csize",
+		cSize,
+		"Context size"
+	);
+	fleet.add_option<double>(
+		"--pright",
+		pRight,
+		"1-probability of noise"
+	);
+	fleet.add_option<std::string>(
+		"--fnameaddition",
+		fnameAddition,
+		"Addition to the filename"
+	);
+
+	// Note that Fleet uses CLI11, so you can add your own options
 	fleet.initialize(argc, argv);
 
     std::random_device rd;
@@ -131,16 +174,18 @@ int main(int argc, char** argv) {
 			auto results = runIL<QuantsHypothesis>(
 				rng,
 				// number of generations
-				5,
+				nGenerations,
 				// number of agents
-				10,
+				nAgents,
 				// number of datapoints
-				100,
+				nObs,
 				// size of contexts
-				5,
+				cSize,
 				// 1-noise in learner's signal observation
-				0.9999,
-				HypothesisInitialization::HYPOTHESIS
+				pRight,
+				// add this to the folder name
+				fnameAddition,
+				HypothesisInit::HYPOTHESIS
 			);
 
 			break;

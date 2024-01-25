@@ -74,10 +74,31 @@ runIL(
 		size_t nObs,
 		size_t cSize,
 		double pRight = 0.9,
+		std::string fnameAddition = "",
 		// the type of initialization 
 		// for agents in the first generation
-		HypothesisInitialization initType = HypothesisInitialization::HYPOTHESIS
+		HypothesisInit initType = HypothesisInit::HYPOTHESIS
 	){
+
+	// Define name of directory to store data
+	// and create directory if it doesn't exist
+	std::filesystem::path dir = "./data";
+	dir /= generateUniqueSuffix();
+	dir /= fnameAddition;
+	std::filesystem::create_directories(dir);
+
+	// save parameters to json file
+	std::filesystem::path jpath = dir;
+	jpath /= "parameters.json";
+	std::ofstream jfile(jpath);
+	nlohmann::json j;
+	j["nAgents"] = nAgents;
+	j["nObs"] = nObs;
+	j["cSize"] = cSize;
+	j["pRight"] = pRight;
+	j["initType"] = initType;
+	j["nGenerations"] = nGenerations;
+	jfile << j.dump() << std::endl;
 
 	// communicative accuracy in each generation for each agent 
 	// dims (nGenerations, nAgents)
@@ -90,22 +111,22 @@ runIL(
 
 	// create vector of agents for first generation
 	// and data produced by each agent in first generation
-	std::vector< Agent< ILHyp> > agents;
-	std::vector< typename ILHyp::data_t > data;
-	std::vector< double > commAccs;
+	std::vector<Agent<ILHyp>> agents;
+	std::vector<typename ILHyp::data_t> data;
+	std::vector<double> commAccs;
 	for( size_t i = 0; i < nAgents; i++ ){
 		std::vector<t_context> cs = generateContexts(cSize, nObs, rng);
 		typename ILHyp::data_t agentdata;
 		double commAcc;
 		Agent< ILHyp > agent;
 		switch( initType ){
-			case HypothesisInitialization::HYPOTHESIS:
+			case HypothesisInit::HYPOTHESIS:
 				agent = Agent< ILHyp >();
 				agentdata = agent.randomInitializationFromHypothesis(rng, cs);
 				commAcc = agent.communicativeAccuracy(agentdata, rng);
 				break;
 
-			case HypothesisInitialization::RANDOMSTRING: {
+			case HypothesisInit::RANDOMSTRING: {
 				agent = Agent< ILHyp >();
 				ILHyp hyp{};
 				LexicalSemantics lex = hyp.getLexicon();
@@ -124,6 +145,17 @@ runIL(
 		data.push_back( agentdata );
 		commAccs.push_back( commAcc );
 	}
+	saveGeneration<ILHyp,Agent<ILHyp>>(
+		dir,
+		0,
+		agents,
+		data,
+		commAccs,
+		// vector of "parent indices" is nonsense for first generation
+		// but has length nAgents
+		std::vector<size_t>(nAgents, 0)
+	);
+
 	// add agents of first generation
 	generations.push_back( agents );
 	// add data produced by the first generation
@@ -140,7 +172,7 @@ runIL(
 	std::cout << "length: " << commAccs.size() << std::endl;
 
 	// run generations 
-	for( size_t i = 0; i < nGenerations; i++ ){
+	for( size_t i = 1; i <= nGenerations; i++ ){
 
 		std::cout << "Starting generation " << i << std::endl;
 			
@@ -155,11 +187,13 @@ runIL(
 
 		// Run agents within a generation in parallel
 		std::vector<std::future<AgentResult<ILHyp>>> futures;
+		std::vector<size_t> parentIndices;
 		for( size_t j = 0; j < nAgents; j++ ){
 
 			// pick a parent based on communicative accuracy
 			// by sampling from a categorical distribution
 			int parentIndex = dist(rng);
+			parentIndices.push_back(parentIndex);
 			Agent parent = parents[ parentIndex ];
 			typename ILHyp::data_t parentdata = parentData[ parentIndex ];
 
@@ -198,6 +232,21 @@ runIL(
 		// add communicative accuracy of the generation
 		allCommAccs.push_back( childrenCommAccs );
 
+		/////// Save generation
+
+		std::filesystem::path filepath = 
+			dir / ("generation_" + std::to_string(i) + ".json");
+
+		saveGeneration<ILHyp,Agent<ILHyp>>(
+			filepath,
+			i,
+			children,
+			childrenData,
+			childrenCommAccs,
+			parentIndices
+		);
+
+		//// Print top hypotheses for each agent
 		for(auto& child : children){
 			std::cout << "Printing child n. " << i << std::endl;
 			TopN<ILHyp> top = child.getTop();

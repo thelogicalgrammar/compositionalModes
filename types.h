@@ -138,7 +138,7 @@ using t_contextVector = std::vector<t_context>;
 // Define types for IL
 using twoDDouble = std::vector<std::vector<double>>;
 
-enum class HypothesisInitialization {
+enum class HypothesisInit {
 	HYPOTHESIS,
 	RANDOMSTRING
 };
