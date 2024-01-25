@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH -n 16
-#SBATCH -p thin
+#SBATCH -p rome
 #SBATCH -t 50:00
 
 # Run this code in a file with source setup.sh
