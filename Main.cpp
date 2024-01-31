@@ -64,6 +64,8 @@ int main(int argc, char** argv) {
 	size_t nObs 		= 100;
 	size_t cSize 		= 5;
 	double pRight 		= 0.9999;
+	double pMutation 	= 0.05;
+	double commSelectionStrength = 0.5;
 	std::string fnameAddition = "";
 
 	fleet.add_option<size_t>(
@@ -91,6 +93,16 @@ int main(int argc, char** argv) {
 		pRight,
 		"1-probability of noise"
 	);
+	fleet.add_option<double>(
+		"--pmutation",
+		pMutation,
+		"1-probability of noise"
+	);
+	fleet.add_option<double>(
+		"--commselectionstrength",
+		commSelectionStrength,
+		"Strength of selection for communicative success"
+	);
 	fleet.add_option<std::string>(
 		"--fnameaddition",
 		fnameAddition,
@@ -99,6 +111,9 @@ int main(int argc, char** argv) {
 
 	// Note that Fleet uses CLI11, so you can add your own options
 	fleet.initialize(argc, argv);
+
+	// Since we use TopN as a finite approximation
+	FleetArgs::MCMCYieldOnlyChanges = true;
 
     std::random_device rd;
     std::mt19937 rng(rd());
@@ -183,6 +198,10 @@ int main(int argc, char** argv) {
 				cSize,
 				// 1-noise in learner's signal observation
 				pRight,
+				// Probability of mutating an agent's hypothesis
+				pMutation,
+				// commSelectionStrength
+				commSelectionStrength,
 				// add this to the folder name
 				fnameAddition,
 				HypothesisInit::HYPOTHESIS

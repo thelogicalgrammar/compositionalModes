@@ -2,6 +2,7 @@
 #include <iomanip>
 #include <chrono>
 #include <unistd.h>
+
 // Note: this needs to go at the end or
 // there's errors with the json library
 #include "json.hpp"
@@ -75,6 +76,14 @@ std::ostream& operator<<(std::ostream& os, const t_cfgMap& cfg) {
     return os;
 }
 
+std::ostream& operator<<(std::ostream& os, const std::vector<t_datum>& data) {
+	// go through the data and print each datapoint
+	for (auto& datum : data) {
+		os << datum << std::endl;
+	}
+	return os;
+}
+
 /* std::ostream& operator<<( */
 /* 		std::ostream& os, const */ 
 
@@ -104,9 +113,10 @@ void saveGeneration(
 		std::filesystem::path filepath,
 		size_t i,
 		std::vector<Ag> children,
-		std::vector<typename HYP::data_t> childrenData,
+		std::optional<std::vector<typename HYP::data_t>> childrenCommData,
+		std::optional<std::vector<typename HYP::data_t>> childrenLearningData,
 		std::vector<double> childrenCommAccs,
-		std::vector<size_t> parentIndices
+		std::optional<std::vector<size_t>> parentIndices
 	){
 	// I need to save the following information 
 	// for each agent in each generation:
@@ -118,6 +128,8 @@ void saveGeneration(
 	// 		(which is also used to calculate communicative accuracy)
 	// - communicative accuracy of agent's language
 	// - index of agent's parent in previous generation
+	
+	std::cout << "Saving generation " << i << " to " << filepath << std::endl;
 
 	std::ofstream file(filepath);
 
@@ -126,23 +138,61 @@ void saveGeneration(
 	j["children"] = json::array();
 	int nAgents = children.size();
 	for( size_t k = 0; k < nAgents; k++ ){
-		typename HYP::data_t childData = childrenData[k];
-		// create a vector of strings from the data using <<
-		std::vector<std::string> childDataStr;
-		for( auto& d : childData ){
-			std::stringstream ss;
-			ss << d;
-			childDataStr.push_back( ss.str() );
-		}
-		double commAcc = childrenCommAccs[k];
-		Ag child = children[k];
 
-		// In the first generation the agent is not
-		// going to have a TopN since they did not run inference
-		std::string topNStr = "";
-		std::string topNSerialized = "";
+		json childk;
+		childk["agentIndex"] = k;
+
+		if( parentIndices.has_value() ){
+			childk["parentIndex"] = parentIndices.value()[k];
+		}
+
+		// If childrenCommData is not empty, then we are saving
+		if( childrenCommData.has_value() ){
+			typename HYP::data_t childCommData = 
+				childrenCommData.value()[k];
+			// create a vector of strings from the data using <<
+			std::vector<std::string> childCommDataStr;
+			for( auto& d : childCommData ){
+				std::stringstream ss;
+				ss << d;
+				childCommDataStr.push_back( ss.str() );
+			}
+			childk["commData"] = childCommDataStr;
+		}
+		
+		if( childrenLearningData.has_value() ){
+			typename HYP::data_t childLearningData = 
+				childrenLearningData.value()[k];
+			std::vector<std::string> childLearningDataStr;
+			for( auto& d : childLearningData ){
+				std::stringstream ss;
+				ss << d;
+				childLearningDataStr.push_back( ss.str() );
+			}
+			childk["learningData"] = childLearningDataStr;
+		}
+
+		double commAcc = childrenCommAccs[k];
+		childk["commAcc"] = commAcc;
+
+		Ag child = children[k];
+		auto childHyp = child.getHypothesis();
+		childk["hypothesis"] = childHyp.string();
+		childk["hypothesisSerialized"] = childHyp.serialize();
+
+		if (child.wasMutated()){
+			auto originalHyp = child.getOriginalHypothesis();
+			childk["originalHypothesis"] = originalHyp.string();
+			childk["originalHypothesisSerialized"] = 
+				originalHyp.serialize();
+		}
+
+		// If the agent's hypothesis was initialized directly
+		// they will not have a TopN since they did not run inference
 		try {
 			TopN<HYP> childTopN = child.getTop();
+			std::string topNStr = "";
+			std::string topNSerialized = "";
 			for(auto& h : childTopN.sorted()) {
 				topNStr +=
 					std::to_string(h.posterior) + " " +
@@ -151,19 +201,10 @@ void saveGeneration(
 					QQ(h.string());
 			}
 			topNSerialized += childTopN.serialize();
+			childk["topNSerialized"] = topNSerialized;
+			childk["topN"] = topNStr;
 		} catch (const std::runtime_error& e) {}
 
-		auto childHyp = child.getHypothesis();
-
-		json childk;
-		childk["agentIndex"] = k;
-		childk["parentIndex"] = parentIndices[k];
-		childk["hypothesis"] = childHyp.string();
-		childk["hypothesisSerialized"] = childHyp.serialize();
-		childk["data"] = childDataStr;
-		childk["commAcc"] = commAcc;
-		childk["topNSerialized"] = topNSerialized;
-		childk["topN"] = topNStr;
 		j["children"].push_back(childk);
 	}
 	if (file.is_open()){

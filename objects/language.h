@@ -647,5 +647,29 @@ public:
 		);
     }
 
+	bool contains(const std::string& name) const {
+		if (std::holds_alternative<t_meaning>(data)) {
+			return description == name;
+		} else {
+			const auto& children = std::get<Children>(data);
+			bool leftContains = children.left ?
+				children.left->contains(name) :
+				false;
+			bool rightContains = children.right ?
+				children.right->contains(name) :
+				false;
+			return leftContains || rightContains;
+		}
+	}
+
+	bool contains(const std::vector<std::string>& names) const {
+		for (const auto& name : names) {
+			if (contains(name)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 };
 

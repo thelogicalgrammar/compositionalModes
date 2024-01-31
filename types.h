@@ -135,6 +135,11 @@ using t_terminalsMap =
 
 using t_contextVector = std::vector<t_context>;
 
+// Type of single data for the Hypotheses
+// input is a context and output a sentence
+using t_datum = defaultdatum_t<t_context,std::string>;
+
+
 // Define types for IL
 using twoDDouble = std::vector<std::vector<double>>;
 

@@ -10,15 +10,19 @@ module load Eigen/3.4.0-GCCcore-11.3.0
 # This to run "make debug" so you can use --gdwarf-5
 module load binutils/2.38-GCCcore-11.3.0
 
-# Compile script
+# Compile script (assuming sbatch is run from the ./server/snellius directory)
 cd ../../
 make
+
 # Execute script 
 ./main \
-	--ngenerations 	5 		\
+	--ngenerations 	1000 	\
 	--nagents 		16 		\
 	--nobs 			100 	\
 	--csize 		5 		\
 	--pright 		0.9999 	\
-	--fnameaddition ""
+	--pmutation		0.05	\
+	--fnameaddition "" 		\
+	--ct			4
+	
 

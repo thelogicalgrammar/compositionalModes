@@ -57,14 +57,20 @@ private:
 	double leafProb;
 	double alpha;
 	double sizeScaling;
+	
 	// top stores the top hypotheses we have found
 	TopN<Hyp> top{size_t{100}};
 	bool hasTop = false;
+
 	// the chosen hypothesis
 	Hyp chosenHyp;
 	bool hasChosenHyp = false;
 
-	double computeComplexity(BTC& sentence){
+	// the original hypothesis in case we mutate
+	std::optional<Hyp> originalHyp = std::nullopt;
+	bool mutated = false;
+
+	double computeComplexity(BTC& sentence) const{
 		// The complexity of the tree is just
 		// the number of terminal nodes
 		return double(sentence.size());
@@ -73,7 +79,7 @@ private:
 	double computeInformativity(
 			t_context observedC,
 			t_t_M meaning
-		){
+		) const{
 		// Since the listener can see the world
 		// except for the target feature,
 		// the possible contexts are the ones that differ
@@ -122,7 +128,7 @@ private:
 			const t_terminalsMap& terminalsMap,
 			// rng is a random number generator
 			std::mt19937& rng
-		) {
+		) const {
 
 		if (maxDepth < 0) {
 			// without this some grammars get stuck in a loop
@@ -246,17 +252,16 @@ private:
 public:
 
 	Agent() {
-
 		// initialize the maximum depth of utterances
 		initialMaxDepth = 4;
 		// initialize the number of samples
 		nSamples = 10000;
-		// initialize the probability of creating a leaf node
+		// initialize the probability of creating a leaf node.
+		// for 0.6, the expected depth is ~2.4
 		leafProb = 0.6;
 		alpha = 3;
-		// Scale the size of the utterances
+		// Scale the size of the utterances when computing complexity
 		sizeScaling = 0.2;
-
 	}
 
 	Agent( typename Hyp::Grammar_t* grammar, std::string parseable ) : Agent(){
@@ -264,7 +269,38 @@ public:
 		this->setHypothesis(Hyp(parseable));
 	}
 
-	TopN<Hyp> getTop() {
+	void mutate() {
+		// Mutate the agent's hypothesis.
+		
+		// Propose a variation of the agent's hypothesis
+		std::optional<std::pair<Hyp,double>> mutatedData = 
+			this->getHypothesis().propose();
+		// Get the mutated hypothesis and set it as the agent's hypothesis
+		if (mutatedData.has_value()) {
+			auto[mutatedHyp,logq] = mutatedData.value();
+			// record original
+			originalHyp = this->getHypothesis();
+			mutated = true;
+			// set new
+			this->setHypothesis(mutatedHyp);
+			std::cout << std::endl;
+			std::cout << "Mutated the agent!" << std::endl;
+			std::cout 
+				<< "original: " 
+				<< originalHyp.value().string() 
+				<< std::endl;
+			std::cout 
+				<< "mutated:  " 
+				<< mutatedHyp 
+				<< std::endl;
+			std::cout << std::endl;
+		} else {
+			// warn that mutation failed
+			std::cout << "Mutation failed!" << std::endl;
+		}
+	}
+
+	TopN<Hyp> getTop() const {
 		if (!hasTop) {
 			throw std::runtime_error("No top defined!");
 		}
@@ -275,7 +311,7 @@ public:
 			std::mt19937 rng,
 			std::vector<t_context> observations,
 			LexicalSemantics lex,
-			double pRight = 0.9
+			double pRight
 		){
 		typename Hyp::data_t mydata;
 		// generate random combinations of utterances and contexts
@@ -294,7 +330,7 @@ public:
 	Hyp::data_t randomInitializationFromHypothesis(
 			std::mt19937 rng,
 			std::vector<t_context> observations,
-			double pRight = 0.9
+			double pRight
 		){
 
 		bool allDefined;
@@ -347,7 +383,7 @@ public:
 	double communicativeAccuracy(
 			Hyp::data_t data,
 			std::mt19937 rng
-		){
+		) const {
 
 		assert(hasChosenHyp&&"No hypothesis has been set yet");
 
@@ -393,21 +429,7 @@ public:
 			}
 			cumCA += CA;
 
-			for (auto elem : datum.input) {
-				std::cout 
-					<< "(" 
-					<< std::get<0>(elem) 
-					<< ", " 
-					<< std::get<1>(elem) 
-					<< ") ";
-			}
-			std::cout 
-				<< "->" 
-				<< datum.output << "		: ";
-			for (auto p : probs) {
-				std::cout << p << " ";
-			}
-			std::cout << "	: " << CA << std::endl;
+			std::cout << datum << probs << "	: " << CA << std::endl;
 
 		}
 		std::cout << std::endl;
@@ -427,7 +449,7 @@ public:
 			LexicalSemantics& lex,
 			t_terminalsMap& terminalsMap,
 			std::mt19937& rng
-		){
+		) const {
 		// Considers a bunch of random utterances
 		// that are all true of the context
 		t_BTC_vec sentences = 
@@ -492,7 +514,7 @@ public:
 			Hyp trueHyp,
 			t_context c, 
 			std::mt19937& rng
-		){
+		) const {
 
 		// get everything from the trueHyp
 		LexicalSemantics lex 		= trueHyp.getLexicon();
@@ -504,7 +526,7 @@ public:
 	std::optional<t_BTC_dist> produce(
 			t_context c, 
 			std::mt19937& rng
-		){
+		) const {
 
 		// Use the chosen hypothesis by default
 		return produce(
@@ -517,7 +539,7 @@ public:
 	std::optional<std::string> produceSingleString(
 			t_context c, 
 			std::mt19937& rng
-		){
+		) const {
 
 		// Use the chosen hypothesis by default
 		std::optional<t_BTC_dist> maybedist = produce(c, rng);
@@ -536,24 +558,38 @@ public:
 	typename Hyp::data_t produceData(
 			std::vector<t_context> cs, 
 			std::mt19937& rng,
-			double probRight=0.95
-		){
+			double pRight
+		) const {
 
 		typename Hyp::data_t data;
 
 		// loop over contexts
 		for (auto& context : cs) {
-			std::optional<std::string> maybestring = produceSingleString(
-				context,
-				rng
-			);
+			auto maybestring = produceSingleString(context, rng);
 			if (maybestring.has_value()) {
 				data.push_back(typename Hyp::datum_t{
-					context, *maybestring, probRight
+					context, *maybestring, pRight
 				});
+			} else {
+				throw std::runtime_error("No data produced");
 			}
 		}
 		return data;
+	}
+
+	typename Hyp::data_t produceData(
+			size_t cSize,
+			size_t nObs,
+			std::mt19937& rng,
+			double pRight
+		) const {
+
+		std::vector<t_context> cs = generateContexts(
+			cSize,
+			nObs,
+			rng
+		);
+		return produceData(cs, rng, pRight);
 	}
 
 	// Goes from a sentence to the probability
@@ -564,7 +600,7 @@ public:
 			// we need the context but don't look at target value
 			t_context observedC,
 			t_BTC_compose compositionFn
-		){
+		) const {
 			
 		// get sentence meaning
 		t_t_M meaning = std::get<t_t_M>(
@@ -618,7 +654,7 @@ public:
 	std::vector<double> interpret(
 			std::unique_ptr<BTC>& s,
 			t_context observedC
-		){
+		) const {
 		return interpret(
 			s,
 			observedC,
@@ -629,7 +665,7 @@ public:
 	std::vector<double> interpret(
 			std::string s,
 			t_context observedC
-		){
+		) const {
 		// by default, use the chosen hypothesis
 		LexicalSemantics lex = this->getHypothesis().getLexicon();
 		// get the sentence
@@ -638,7 +674,6 @@ public:
 	}
 	
 	void learn(Hyp::data_t data){
-
 		assert(!hasTop&&"Top already defined!");
 		
 		auto h0 = Hyp::sample();
@@ -664,7 +699,6 @@ public:
 	}
 
 	void pickHypothesis(std::mt19937& rng){
-
 		// sample one hypothesis from the posterior in top
 
 		TopN<Hyp> localtop = getTop();
@@ -703,15 +737,24 @@ public:
 		hasChosenHyp = true;
 	}
 
-	Hyp getHypothesis(){
+	Hyp getHypothesis() const {
 		assert(hasChosenHyp&&"No hypothesis has been chosen!");
 		return chosenHyp;
+	}
+
+	bool wasMutated() const {
+		return mutated;
+	}
+
+	Hyp getOriginalHypothesis() const {
+		assert(mutated&&"Hypothesis was not mutated!");
+		return originalHyp.value();
 	}
 	
 	// This function takes a lexical semantics
 	// and returns a map from each type in t_meaning
 	// to the lexical entries that have that type
-	t_terminalsMap generateTerminalsMap(LexicalSemantics& lex) {
+	t_terminalsMap generateTerminalsMap(LexicalSemantics& lex) const {
 		t_terminalsMap tmap;
 		// type of meaning a string
 		for (auto&& [word, meaning] : lex) {
@@ -728,7 +771,7 @@ public:
 	// (i.e. the types that can be the left and right
 	// children of the composition function)
 	// Nodes don't compose only if they return Empty{}.
-	t_cfgMap generateCFGMap(t_BTC_compose& compositionFn) {
+	t_cfgMap generateCFGMap(t_BTC_compose& compositionFn) const {
 
 		// Map from each type to the types 
 		// that can be composed with it
@@ -791,7 +834,7 @@ public:
 			LexicalSemantics& lex,
 			t_terminalsMap& terminalsMap,
 			std::mt19937& rng
-		) {
+		) const {
 
         std::vector<std::unique_ptr<BTC>> validBTCs;
         std::set<std::string> evaluatedTrees;

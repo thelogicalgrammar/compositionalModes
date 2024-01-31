@@ -91,9 +91,6 @@ using t_grammar_output = std::tuple<
 	t_t_w, 
 	t_t_w
 >;
-// Type of single data for the Hypotheses
-// input is a context and output a sentence
-using t_datum = defaultdatum_t<t_context,std::string>;
 
 template<class... Ts>
 struct overloaded : Ts... {
@@ -630,5 +627,22 @@ public:
 			return -std::numeric_limits<double>::infinity();
 		}
 	}
+
+	static data_t dataFilter(data_t data) {
+		auto substrings = std::vector<std::string>{"Q1","Q2","Q3"};
+		data_t filteredData;
+		for (auto& d : data) {
+			for (const auto& substring : substrings) {
+				if (d.output.find(substring) != std::string::npos) {
+					filteredData.push_back(d);
+					// break out of the inner loop
+					break;
+				}
+			}
+		}
+
+		return filteredData;
+	}
 };
+
 
