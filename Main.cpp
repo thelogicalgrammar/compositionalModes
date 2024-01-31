@@ -96,7 +96,7 @@ int main(int argc, char** argv) {
 	fleet.add_option<double>(
 		"--pmutation",
 		pMutation,
-		"1-probability of noise"
+		"Probability of hypothesis mutation in children"
 	);
 	fleet.add_option<double>(
 		"--commselectionstrength",

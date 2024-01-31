@@ -26,3 +26,4 @@ make
 	--ct			4
 	
 
+# ./main --ngenerations 1000 --nagents 16 --nobs 100 --csize 5 --pright 0.9999 --pmutation 0.05 --fnameaddition "" --ct 4
