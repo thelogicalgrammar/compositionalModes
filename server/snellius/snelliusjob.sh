@@ -1,8 +1,8 @@
 #!/bin/bash
-#SBATCH -ntasks 16
-#SBATCH -cpus-per-task=1
-#SBATCH -p rome
-#SBATCH -t 50:00:00
+#SBATCH --ntasks 16
+#SBATCH --cpus-per-task 1
+#SBATCH --p rome
+#SBATCH --t 50:00:00
 
 # Run this code in a file with source setup.sh
 module load 2022
