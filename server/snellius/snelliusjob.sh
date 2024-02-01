@@ -10,6 +10,8 @@ module load 2022
 module load Eigen/3.4.0-GCCcore-11.3.0
 # This to run "make debug" so you can use --gdwarf-5
 module load binutils/2.38-GCCcore-11.3.0
+# To run in parallel
+module load parallel/20220722-GCCcore-11.3.0
 
 # Compile script (assuming sbatch is run from the ./server/snellius directory)
 cd ../../
