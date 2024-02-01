@@ -1,7 +1,8 @@
 #!/bin/bash
-#SBATCH -n 16
+#SBATCH -ntasks 16
+#SBATCH -cpus-per-task=1
 #SBATCH -p rome
-#SBATCH -t 50:00
+#SBATCH -t 50:00:00
 
 # Run this code in a file with source setup.sh
 module load 2022
@@ -15,15 +16,15 @@ cd ../../
 make
 
 # Execute script 
-./main \
-	--ngenerations 	1000 	\
-	--nagents 		16 		\
-	--nobs 			100 	\
-	--csize 		5 		\
-	--pright 		0.9999 	\
-	--pmutation		0.05	\
-	--fnameaddition "" 		\
-	--ct			4
+seq 1 16 | parallel -j 16 ./main \
+		--ngenerations 	200 	 \
+		--nagents 		10 		 \
+		--nobs 			50	 	 \
+		--csize 		5 		 \
+		--pright 		0.9999 	 \
+		--pmutation		0.1		 \
+		--fnameaddition "run_{}" \
+		--ct			4
 	
 
 # ./main --ngenerations 1000 --nagents 16 --nobs 100 --csize 5 --pright 0.9999 --pmutation 0.05 --fnameaddition "" --ct 4

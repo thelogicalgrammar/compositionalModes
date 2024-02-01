@@ -138,12 +138,10 @@ private:
 		}
 
 		// is typeName not in the terminals map?
-		bool noterminal = 
-			terminalsMap.find(typeName) == terminalsMap.end();
+		bool noterminal = terminalsMap.find(typeName) == terminalsMap.end();
 
 		// is typeName not in the cfg map?
-		bool nocfg = 
-			cfgMap.find(typeName) == cfgMap.end();
+		bool nocfg = cfgMap.find(typeName) == cfgMap.end();
 
 		// If there is no terminal of the given type
 		// AND we cannot get it by composition,
