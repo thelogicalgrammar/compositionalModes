@@ -164,7 +164,7 @@ runIL(
 		double pRight,
 		double pMutation,
 		double commSelectionStrength,
-		std::optional(std::string) fname = std::nullopt,
+		std::optional<std::string> fname = std::nullopt,
 		// the type of initialization 
 		// for agents in the first generation
 		HypothesisInit initType = HypothesisInit::HYPOTHESIS
@@ -172,11 +172,12 @@ runIL(
 
 	// Determine folder name and create
 	std::filesystem::path dir{};
-	if (fname.hasvalue()){
+	if (fname.has_value()){
 		dir = fname.value();
 	} else {
 		// Define name of directory to store data
-		dir = "./data" / generateUniqueSuffix();
+		dir = "./data" ;
+		dir /= generateUniqueSuffix();
 	}
 
 	try {

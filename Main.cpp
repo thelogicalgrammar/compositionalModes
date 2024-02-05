@@ -66,7 +66,7 @@ int main(int argc, char** argv) {
 	double pRight 		= 0.9999;
 	double pMutation 	= 0.05;
 	double commSelectionStrength = 0.5;
-	std::string fnameAddition = "";
+	std::string fname = "";
 
 	fleet.add_option<size_t>(
 		"--ngenerations",
