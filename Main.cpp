@@ -104,9 +104,9 @@ int main(int argc, char** argv) {
 		"Strength of selection for communicative success"
 	);
 	fleet.add_option<std::string>(
-		"--fnameaddition",
-		fnameAddition,
-		"Addition to the filename"
+		"--fname",
+		fname,
+		"Folder name for saving runs"
 	);
 
 	// Note that Fleet uses CLI11, so you can add your own options
@@ -202,11 +202,10 @@ int main(int argc, char** argv) {
 				pMutation,
 				// commSelectionStrength
 				commSelectionStrength,
-				// add this to the folder name
-				fnameAddition,
+				// add this to the folder name 
+				fname, 
 				HypothesisInit::HYPOTHESIS
 			);
-
 			break;
 		}
 	}

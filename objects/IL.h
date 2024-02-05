@@ -164,22 +164,30 @@ runIL(
 		double pRight,
 		double pMutation,
 		double commSelectionStrength,
-		std::string fnameAddition = "",
+		std::optional(std::string) fname = std::nullopt,
 		// the type of initialization 
 		// for agents in the first generation
 		HypothesisInit initType = HypothesisInit::HYPOTHESIS
 	){
 
-	// Define name of directory to store data
-	// and create directory if it doesn't exist
-	std::filesystem::path dir = "./data";
-	dir /= generateUniqueSuffix();
-	dir /= fnameAddition;
-	std::filesystem::create_directories(dir);
+	// Determine folder name and create
+	std::filesystem::path dir{};
+	if (fname.hasvalue()){
+		dir = fname.value();
+	} else {
+		// Define name of directory to store data
+		dir = "./data" / generateUniqueSuffix();
+	}
+
+	try {
+		// create directory if it doesn't exist
+		std::filesystem::create_directories(dir);
+	} catch (const std::filesystem::filesystem_error& e) {
+		std::cerr << "Error while creating dir" << e.what() << std::endl;
+	}
 
 	// save parameters to json file
-	std::filesystem::path jpath = dir;
-	jpath /= "parameters.json";
+	std::filesystem::path jpath = dir / "parameters.json";
 	std::ofstream jfile(jpath);
 	nlohmann::json j;
 	j["nAgents"] = nAgents;

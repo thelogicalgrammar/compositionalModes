@@ -17,7 +17,8 @@ module load parallel/20220722-GCCcore-11.3.0
 cd ../../
 make
 
-# Execute script 
+# ID is a string with current time
+ID = $(date +"%Y%m%d_%H%M%S")
 seq 1 16 | parallel -j 16 ./main \
 		--ngenerations 	100 	 \
 		--nagents 		10 		 \
@@ -25,7 +26,7 @@ seq 1 16 | parallel -j 16 ./main \
 		--csize 		5 		 \
 		--pright 		0.9999 	 \
 		--pmutation		0.0		 \
-		--fnameaddition "run_{}" \
+		--fnameaddition "{$ID}/run_{}" \
 		--ct			4
 	
 
