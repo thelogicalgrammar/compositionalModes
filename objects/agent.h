@@ -57,6 +57,7 @@ private:
 	double leafProb;
 	double alpha;
 	double sizeScaling;
+	int learningSamples;
 	
 	// top stores the top hypotheses we have found
 	TopN<Hyp> top{size_t{100}};
@@ -253,13 +254,14 @@ public:
 		// initialize the maximum depth of utterances
 		initialMaxDepth = 4;
 		// initialize the number of samples
-		nSamples = 10000;
+		nSamples = 5000;
 		// initialize the probability of creating a leaf node.
 		// for 0.6, the expected depth is ~2.4
 		leafProb = 0.6;
 		alpha = 3;
 		// Scale the size of the utterances when computing complexity
 		sizeScaling = 0.2;
+		learningSamples = 50000;
 	}
 
 	Agent( typename Hyp::Grammar_t* grammar, std::string parseable ) : Agent(){
@@ -685,9 +687,7 @@ public:
 		std::cout << "Running parallel tempering..." << std::endl;
 
 		for(auto& h : samp.run(
-			Control(100000)) |
-			top | 
-			printer(FleetArgs::print)
+			Control(learningSamples)) | top | printer(FleetArgs::print)
 		){
 			// Add hypothesis to top
 			top << h;
