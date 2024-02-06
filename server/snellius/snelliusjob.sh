@@ -27,7 +27,7 @@ seq 1 16 | parallel -j 16 ./main \
 	--pright 		0.9999 	 \
 	--pmutation		0.0		 \
 	--commselectionstrength 0.0 \
-	--fnameaddition "{$ID}/run_{}" \
+	--fname "{$ID}/run_{}" \
 	--ct			4
 	
 
