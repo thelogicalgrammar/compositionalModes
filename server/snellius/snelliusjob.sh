@@ -18,7 +18,7 @@ cd ../../
 make
 
 # ID is a string with current time
-ID = $(date +"%Y%m%d_%H%M%S")
+ID=$(date +"%Y%m%d_%H%M%S")
 seq 1 16 | parallel -j 16 ./main \
 	--ngenerations 	100 	 \
 	--nagents 		10 		 \
@@ -27,7 +27,7 @@ seq 1 16 | parallel -j 16 ./main \
 	--pright 		0.9999 	 \
 	--pmutation		0.0		 \
 	--commselectionstrength 0.0 \
-	--fname "{$ID}/{}" \
+	--fname "${ID}/{}" \
 	--ct			4
 	
 
