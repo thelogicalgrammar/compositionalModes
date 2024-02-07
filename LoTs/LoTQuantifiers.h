@@ -6,7 +6,10 @@
 using t_int = int;
 
 // A bare wrapper function around a meaning type
-// so Fleet can distinguish between them.
+// so Fleet can distinguish between the operations
+// involved in the composition function and those involved
+// in the quantifiers definitions (since the arguments
+// that need to appear in the two are different)
 template <typename T>
 struct WrapperC {
 	T i;

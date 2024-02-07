@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --ntasks 160
+#SBATCH --ntasks 64
 #SBATCH --cpus-per-task 1
 #SBATCH -p rome
 #SBATCH -t 100:00:00
@@ -19,7 +19,7 @@ make
 
 # ID is a string with current time
 ID=$(date +"%Y%m%d_%H%M%S")
-seq 1 16 | parallel -j 160 ./main \
+seq 1 64 | parallel -j 64 ./main \
 	--ngenerations 	100 	 \
 	--nagents 		10 		 \
 	--nobs 			100	 	 \
