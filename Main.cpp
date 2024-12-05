@@ -30,25 +30,27 @@
 
 // The various abbreviations for types
 #include "types.h"
-// Overloaded operators for printing
+// Overloaded operators for printing for the various types
 #include "stream.h"
 // The basic lexical semantics. NOTE: No composition function here!
 #include "objects/language.h"
 // The world that produces the context
 #include "objects/world.h"
-// Grammar and Hypothesis for the parts of language to infer
-/* #include "LoTs/LoTCompFunc.h" */
-#include "LoTs/LoTQuantifiers.h"
 // The agents that produce, interpret, and learn
 #include "objects/agent.h"
+// Grammar and Hypothesis for the parts of language to infer
+// INCLUDE ONLY THE ONE YOU NEED
+/* #include "LoTs/LoTCompFunc.h" */
+#include "LoTs/LoTQuantifiers.h"
+// Implementation of the tradeoff analysis
+#include "objects/Tradeoff.h"
+#include "objects/CommAcc.h"
 
-// Implementation of iterated learning
-#include "objects/IL.h"
-
+// Names for the possible simulations that we can run in main
 enum class SimulationType {
 	TESTGRAMMAR,
-	TESTLEARNING,
-	IL
+	TESTCOMMUNICATION,
+	TRADEOFF
 };
 
 int main(int argc, char** argv) {
@@ -57,27 +59,14 @@ int main(int argc, char** argv) {
 	// mcts_steps, mcc_steps, etc
 	Fleet fleet("Modes of composition");
 
-	// Adding some command line options
-	// that I need below
-	size_t nGenerations = 5;
-	size_t nAgents 		= 10;
-	size_t nObs 		= 100;
+	// Adding some command line options that I need below
+
+	size_t nObs 		= 50;
 	size_t cSize 		= 5;
-	double pRight 		= 0.9999;
-	double pMutation 	= 0.05;
-	double commSelectionStrength = 0.5;
+	double likelihoodWeight = 1;
+	double searchDepth = 2;
 	std::string fname = "";
 
-	fleet.add_option<size_t>(
-		"--ngenerations",
-		nGenerations,
-		"Number of generations"
-	);
-	fleet.add_option<size_t>(
-		"--nagents",
-		nAgents,
-		"Number of agents"
-	);
 	fleet.add_option<size_t>(
 		"--nobs",
 		nObs,
@@ -89,26 +78,21 @@ int main(int argc, char** argv) {
 		"Context size"
 	);
 	fleet.add_option<double>(
-		"--pright",
-		pRight,
-		"1-probability of noise"
+		"--likelihoodweight",
+		likelihoodWeight,
+		"Weight of communicative accuracy in tradeoff"
 	);
 	fleet.add_option<double>(
-		"--pmutation",
-		pMutation,
-		"Probability of hypothesis mutation in children"
-	);
-	fleet.add_option<double>(
-		"--commselectionstrength",
-		commSelectionStrength,
-		"Strength of selection for communicative success"
+		"--searchdepth",
+		searchDepth,
+		"Maximum depth of signals when enumerating utterances to estimate communicative accuracy"
 	);
 	fleet.add_option<std::string>(
 		"--fname",
 		fname,
 		"Folder name for saving runs"
 	);
-
+	
 	// Note that Fleet uses CLI11, so you can add your own options
 	fleet.initialize(argc, argv);
 
@@ -118,8 +102,10 @@ int main(int argc, char** argv) {
     std::random_device rd;
     std::mt19937 rng(rd());
 
-	SimulationType simulationType = SimulationType::IL;
-	/* SimulationType simulationType = SimulationType::TESTLEARNING; */
+	// Decide what simulation to run
+	/* SimulationType simulationType = SimulationType::TESTCOMMUNICATION; */
+	/* SimulationType simulationType = SimulationType::TESTGRAMMAR; */
+	SimulationType simulationType = SimulationType::TRADEOFF;
 
 	switch (simulationType) {
 
@@ -136,75 +122,117 @@ int main(int argc, char** argv) {
 			}
 			break;
 		}
-		case SimulationType::TESTLEARNING: {
+		
+		case SimulationType::TESTCOMMUNICATION: {
 
-			////// Learn from a specific sentence
-
-			// Here I used the Fleet Grammar's to_parseable 
-			// to generate a string representation
-			// that the Hypothesis can use to parse 
-			// the string into a hypothesis
-			// This is a bit of a hack, but it works for now. 
-			// It might stop working if the grammar changes!
-
+			// High accuracy quantifiers 
 			/* ( ( X.Q X.R ) ( intersection X.R X.L ) ) */
-			std::string quantString = "1:%s | %s | %s | %s;3:( %s %s );7:( %s %s );6:%s.Q;0:X;4:%s.R;0:X;4:( intersection %s %s );4:%s.R;0:X;4:%s.L;0:X;";
+			std::string highQuantString = "1:%s | %s | %s | %s;3:( %s %s );7:( %s %s );6:%s.Q;0:X;4:%s.R;0:X;4:( intersection %s %s );4:%s.R;0:X;4:%s.L;0:X;";
 			/* ( intEq ( cardinality X.L X.c ) ( cardinality X.R X.c ) ) */
-			std::string q1string = "8:( intEq %s %s );10:( cardinality %s %s );9:%s.L;0:X;2:%s.c;0:X;10:( cardinality %s %s );9:%s.R;0:X;2:%s.c;0:X;";
+			std::string highQ1string = "8:( intEq %s %s );10:( cardinality %s %s );9:%s.L;0:X;2:%s.c;0:X;10:( cardinality %s %s );9:%s.R;0:X;2:%s.c;0:X;";
 			/* ( intGt ( cardinality X.R X.c ) 0 ) */
-			std::string q2string = "8:( intGt %s %s );10:( cardinality %s %s );9:%s.R;0:X;2:%s.c;0:X;10:0;";
+			std::string highQ2string = "8:( intGt %s %s );10:( cardinality %s %s );9:%s.R;0:X;2:%s.c;0:X;10:0;";
 			/* ( intGt ( cardinality X.R X.c ) ( cardinality X.L X.c ) ) */
-			std::string q3string = "8:( intGt %s %s );10:( cardinality %s %s );9:%s.R;0:X;2:%s.c;0:X;10:( cardinality %s %s );9:%s.L;0:X;2:%s.c;0:X";
+			std::string highQ3string = "8:( intGt %s %s );10:( cardinality %s %s );9:%s.R;0:X;2:%s.c;0:X;10:( cardinality %s %s );9:%s.L;0:X;2:%s.c;0:X";
 
 			// Sentence to reconstruct
-			std::string stringRepr = quantString + q1string + q2string + q3string;
-			// Contexts
-			std::vector<t_context> cs = generateContexts(
-				size_t{5},size_t{100},rng
+			std::string highStringRepr = 
+				highQuantString + highQ1string + highQ2string + highQ3string;
+
+			estimateCommAcc<QuantsHypothesis>(
+				highStringRepr,
+				nObs,
+				cSize,
+				likelihoodWeight,
+				rng,
+				"./data/commAccHigh.txt"
 			);
-			// Generate data from the sentence
-			Agent<QuantsHypothesis> teacher(&grammar, stringRepr);
-			auto data = teacher.produceData(cs, rng, 0.9999);
-			// Print data
-			for (auto& d : data) {
-				std::cout << d << std::endl;
-			}
-			// Let the agent learn the data
-			Agent<QuantsHypothesis> learner{};
-			learner.learn(data);
-			auto top = learner.getTop();
-			top.print();
-			// Test the communicative accuracy of the sentence
-			learner.pickHypothesis(rng);
-			double commAcc = learner.communicativeAccuracy(data, rng);
-			std::cout << "Communicative accuracy: " << commAcc << std::endl;
+			
+			// MediumHigh accuracy quantifiers 
+			/* ( ( X.Q X.R ) X.L ) */
+			std::string mediumHighQuantString = "1:%s | %s | %s | %s;3:( %s %s );7:( %s %s );6:%s.Q;0:X;4:%s.R;0:X;4:%s.L;0:X;";
+			/* ( intEq ( cardinality X.L X.c ) ( cardinality X.R X.c ) ) */
+			std::string mediumHighQ1string = "8:( intEq %s %s );10:( cardinality %s %s );9:%s.L;0:X;2:%s.c;0:X;10:( cardinality %s %s );9:%s.R;0:X;2:%s.c;0:X;";
+			/* ( intGt ( cardinality X.R X.c ) 0 ) */
+			std::string mediumHighQ2string = "8:( intGt %s %s );10:( cardinality %s %s );9:%s.R;0:X;2:%s.c;0:X;10:0;";
+			/* ( intGt ( cardinality X.R X.c ) ( cardinality X.L X.c ) ) */
+			std::string mediumHighQ3string = "8:( intGt %s %s );10:( cardinality %s %s );9:%s.R;0:X;2:%s.c;0:X;10:( cardinality %s %s );9:%s.L;0:X;2:%s.c;0:X";
+
+			// Sentence to reconstruct
+			std::string mediumHighStringRepr = 
+				mediumHighQuantString + mediumHighQ1string + mediumHighQ2string + mediumHighQ3string;
+
+			estimateCommAcc<QuantsHypothesis>(
+				mediumHighStringRepr,
+				nObs,
+				cSize,
+				likelihoodWeight,
+				rng,
+				"./data/commAccMediumHigh.txt"
+			);
+
+			// MediumLow accuracy quantifiers 
+			/* ( ( X.Q X.R ) X.R ) */
+			std::string mediumLowQuantString = "1:%s | %s | %s | %s;3:( %s %s );7:( %s %s );6:%s.Q;0:X;4:%s.R;0:X;4:%s.R;0:X;";
+			/* ( intEq ( cardinality X.L X.c ) ( cardinality X.R X.c ) ) */
+			std::string mediumLowQ1string = "8:( intEq %s %s );10:( cardinality %s %s );9:%s.L;0:X;2:%s.c;0:X;10:( cardinality %s %s );9:%s.R;0:X;2:%s.c;0:X;";
+			/* ( intGt ( cardinality X.R X.c ) 0 ) */
+			std::string mediumLowQ2string = "8:( intGt %s %s );10:( cardinality %s %s );9:%s.R;0:X;2:%s.c;0:X;10:0;";
+			/* ( intGt ( cardinality X.R X.c ) ( cardinality X.L X.c ) ) */
+			std::string mediumLowQ3string = "8:( intGt %s %s );10:( cardinality %s %s );9:%s.R;0:X;2:%s.c;0:X;10:( cardinality %s %s );9:%s.L;0:X;2:%s.c;0:X";
+
+			// Sentence to reconstruct
+			std::string mediumLowStringRepr = 
+				mediumLowQuantString + mediumLowQ1string + mediumLowQ2string + mediumLowQ3string;
+
+			estimateCommAcc<QuantsHypothesis>(
+				mediumLowStringRepr,
+				nObs,
+				cSize,
+				likelihoodWeight,
+				rng,
+				"./data/commAccMediumLow.txt"
+			);
+
+			// Low accuracy quantifiers 
+			/* ( intGt 0 1 ) */
+			std::string LowQuantString = "1:%s | %s | %s | %s;3:( intGt %s %s );5:0;5:1;";
+			/* ( intEq ( cardinality X.R X.c ) ( cardinality X.L X.c ) ) */
+			std::string LowQ1string = "8:( intEq %s %s );10:( cardinality %s %s );9:%s.R;0:X;2:%s.c;0:X;10:( cardinality %s %s );9:%s.L;0:X;2:%s.c;0:X;";
+			std::string LowQ2string = "8:( intEq %s %s );10:( cardinality %s %s );9:%s.R;0:X;2:%s.c;0:X;10:( cardinality %s %s );9:%s.L;0:X;2:%s.c;0:X;";
+			std::string LowQ3string = "8:( intEq %s %s );10:( cardinality %s %s );9:%s.R;0:X;2:%s.c;0:X;10:( cardinality %s %s );9:%s.L;0:X;2:%s.c;0:X;";
+
+			// Sentence to reconstruct
+			std::string lowStringRepr = 
+				LowQuantString + LowQ1string + LowQ2string + LowQ3string;
+
+			estimateCommAcc<QuantsHypothesis>(
+				lowStringRepr,
+				nObs,
+				cSize,
+				likelihoodWeight,
+				rng,
+				"./data/commAccLow.txt"
+			);
 
 			break;
 		}
 
-		case SimulationType::IL: {
+		case SimulationType::TRADEOFF: {
 
-			////// Run iterated learning
-			
-			auto results = runIL<QuantsHypothesis>(
-				rng,
-				// number of generations
-				nGenerations,
-				// number of agents
-				nAgents,
-				// number of datapoints
+			auto results = runTradeoffAnalysis<QuantsHypothesis>(
+				// number of samples to estimate communicative accuracy
 				nObs,
 				// size of contexts
 				cSize,
-				// 1-noise in learner's signal observation
-				pRight,
-				// Probability of mutating an agent's hypothesis
-				pMutation,
-				// commSelectionStrength
-				commSelectionStrength,
+				// likelihoodWeight
+				likelihoodWeight,
+				// seed
+				rng,
+				// search depth
+				searchDepth,
 				// add this to the folder name 
-				fname, 
-				HypothesisInit::HYPOTHESIS
+				fname
 			);
 			break;
 		}

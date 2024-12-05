@@ -1,6 +1,6 @@
 # pragma once
 
-// Here I extent the typing system slightly
+// Here I extent the typing system of H&K slightly
 // to include integers as a basic type
 // to match the definitions in Van de Pol et al 2023.
 using t_int = int;
@@ -8,8 +8,8 @@ using t_int = int;
 // A bare wrapper function around a meaning type
 // so Fleet can distinguish between the operations
 // involved in the composition function and those involved
-// in the quantifiers definitions (since the arguments
-// that need to appear in the two are different)
+// in the quantifiers definitions (since the specific arguments
+// that the two can take are different)
 template <typename T>
 struct WrapperC {
 	T i;
@@ -70,16 +70,25 @@ using t_DP_w  = WrapperF<t_DP,t_IV>;
 using t_TV_w  = WrapperF<t_TV,t_e>;
 using t_Q_w   = WrapperF<t_Q,t_IV>;
 
+// Input and output types for each sentence produced by the grammar.
+// The agent learns a distribution over sentences in this grammar, which
+// encodes a part of their language, namely, the three quantifiers and
+// how they compose with IVs. 
+// The sentence does two things:
+// 1. It encodes how to compose Qs with IVs (first three inputs, first output)
+// 2. It encodes three quantifiers (last two inputs, last three outputs)
 using t_grammar_input = std::tuple<
 	// Arguments to compfunction for node [Q IV]
 	t_Q,
 	t_IV,
 	t_IV,
-	// context is used for both inferred components
+	// same context is used for both inferred components
 	t_context,
 	// arguments to quantifier meaning
 	// (these should not appear in the two components above
-	// and therefore everything is defined with wrappers)
+	// because once the agent uses them for communication they are 
+	// not event defined in the context of composing Q and IV.
+	// Therefore, everything is defined with wrappers)
 	t_IV_w,
 	t_IV_w
 >;
@@ -88,7 +97,7 @@ using t_grammar_output = std::tuple<
 	// the meaning of the node [[Q IV] IV]
 	// as a function of the input meanings
 	t_t,
-	// three quantifier's outputs 
+	// the output of the three quantifiers in the language
 	// given the inputs above
 	t_t_w, 
 	t_t_w, 
@@ -113,8 +122,10 @@ inline constexpr bool accepts_arg_v = accepts_arg<T, U>::value;
 
 namespace Quants_DSL{
 
+	// function to glue together the components
+	// of each sentence produced by the grammar
 	t_grammar_output makeGrammarOutput(
-		t_t tQ,
+		t_t   tQ,
 		t_t_w t1,
 		t_t_w t2,
 		t_t_w t3
@@ -283,22 +294,23 @@ namespace Quants_DSL{
 
 	/////// NOT IN VAN DE POL ///////
 
-/* 	auto complement = */ 
-/* 		+[](t_IV m) -> t_IV { */
-/* 			return t_IV([m](t_e e) -> t_t {return !m(e);}); */
-/* 		}; */
+	/* 	auto complement = */ 
+	/* 		+[](t_IV m) -> t_IV { */
+	/* 			return t_IV([m](t_e e) -> t_t {return !m(e);}); */
+	/* 		}; */
 
-/* 	auto include = */
-/* 		+[](t_IV m1, t_IV m2) -> t_t { */
-/* 			bool out = true; */
-/* 			for (auto e : c) { */
-/* 				if (m1(e) && !m2(e)) { */
-/* 					out = false; */
-/* 					break; */
-/* 				} */
-/* 			} */
-/* 			return out; */
-/* 		}; */
+	/* 	auto include = */
+	/* 		+[](t_IV m1, t_IV m2) -> t_t { */
+	/* 			bool out = true; */
+	/* 			for (auto e : c) { */
+	/* 				if (m1(e) && !m2(e)) { */
+	/* 					out = false; */
+	/* 					break; */
+	/* 				} */
+	/* 			} */
+	/* 			return out; */
+	/* 		}; */
+
 }
 
 class QuantsGrammar : public Grammar< 
@@ -442,16 +454,37 @@ public:
 	}
 } grammar;
 
-// Define CompHypothesis
+// The idea here is to run a tradeoff analysis of communicative
+// accuracy and simplicity of the language. 
+// This is done by using Fleet to find languages that are simple
+// with a likelihood function that is just the weighted communicative accuracy.
+// This simulation runs the analysis for a single likelihood weight.
+// Keep meaningful t_datum and t_data even if they are not used,
+// because they can be used in e.g., communicativeAccuracy to manage the
+// produced observations.
 
-class QuantsHypothesis final : public DeterministicLOTHypothesis<
+class QuantsHypothesis : public DeterministicLOTHypothesis<
 		QuantsHypothesis,
 		t_grammar_input,
 		t_grammar_output,
 		QuantsGrammar,
 		&grammar,
-		t_datum
-	> {
+		t_datum > {
+
+private:
+	// Initialize before setting them below
+	
+	// Number of observations
+	static inline size_t nObs = 0;
+	// Context size
+	static inline size_t cSize = 0;
+	// Weight of communicative accuracy in tradeoff
+	static inline double likelihoodWeight = 0.0;
+	// Initialize random number generator anew 
+	static inline std::mt19937 local_rng = std::mt19937(std::random_device{}());
+	// Maximum depth of signals when enumerating utterances
+	// to estimate communicative accuracy
+	static inline size_t searchDepth = 2;
 
 public:
 	using Super = DeterministicLOTHypothesis<
@@ -460,17 +493,68 @@ public:
 		t_grammar_output,
 		QuantsGrammar,
 		&grammar,
-		t_datum
-		>;
+		t_datum >;
+
 	using Super::Super; 
+
+	static void setParams(size_t nObs, 
+						  size_t cSize,
+						  double likelihoodWeight,
+						  std::mt19937& local_rng,
+						  size_t searchDepth) {
+		QuantsHypothesis::nObs = nObs;
+		QuantsHypothesis::cSize = cSize;
+		QuantsHypothesis::likelihoodWeight = likelihoodWeight;
+		QuantsHypothesis::local_rng = local_rng;
+		QuantsHypothesis::searchDepth = searchDepth;
+	}
 
 	QuantsHypothesis() : Super () {
 		// Maximum depth of the hypotheses
 		grammar.GRAMMAR_MAX_DEPTH = 50;
 	}
 
+	double compute_likelihood(const data_t& x,
+							  const double breakout=-infinity) override {
+		// NOTE: Here I disregard the data,
+		// since the likelihood only depends on communicative accuracy
+		// which I calculate inside this function.
 
+		// Agent to calculate communicative accuracy with.
+		Agent<QuantsHypothesis> agent{};
+
+		// set the hypothesis of the agent to the current hypothesis
+		agent.setHypothesis(*this);
+
+		std::vector<t_context> cs = generateContexts(cSize, nObs, local_rng);
+
+		// produce data for approximating communicative accuracy
+		data_t commData =
+			agent.produceDataFromEnumeration(cs, local_rng, searchDepth);
+
+		// the new agent computes its communicative accuracy
+		double commAcc = agent.communicativeAccuracy(commData, local_rng);
+
+		// The likelihood is the weighted sum of the communicative accuracy
+		// and the simplicity of the language.
+		// Note that commAcc is already the log of a probability
+		double loglik = likelihoodWeight * commAcc;
+
+		// print value
+		std::cout << "Log likelihood: " << loglik << std::endl;
+		std::cout << "Value: " << this->value << std::endl;
+		std::cout << std::endl;
+
+		return loglik;
+	}
+
+	// Extracts the component of a sentence from the LOT 
+	// that encodes the composition function.
 	t_BTC_compose getCompositionF() {
+		// Return a composition function that:
+		// 1. If the types are t_Q_M and t_IV_M, then calls the relevant
+		//   hypothesis to compose the meanings.
+		// 2. Otherwise, applies the first meaning to the second.
 		return [this](t_meaning a, t_meaning b) -> t_meaning {
 			return std::visit(
 				[this](auto&& f, auto&&arg) -> t_meaning {
@@ -485,6 +569,7 @@ public:
 							[this,f,arg](t_context c) -> t_DP {
 								t_DP dp = [this,f,arg,c](t_IV iv) -> t_t{
 									try {
+										// call the relevant hypothesis
 										auto x = call(std::make_tuple(
 											f(c),
 											// left argument to Q
@@ -492,10 +577,10 @@ public:
 											// right argument to Q
 											iv,
 											c,
-											// unused.
-											// If they are empty initialized
+											// Unused.
+											// If they are initialized empty 
 											// they throw a bad_function_call,
-											// because it's called inside hyp
+											// because they're called in hyp,
 											// so use standins instead.
 											// TODO: Find better way!
 											/* t_IV_w{}, */
@@ -511,11 +596,14 @@ public:
 												}
 											)
 										));
+										// get the relevant part of
+										// the output
 										t_t tv = std::get<0>(x);
 										return tv;
 									// catch bad_function_call
 									} catch (std::bad_function_call& e) {
 										std::cout << "here 1" << std::endl;
+										std::terminate();
 									}
 								};
 								return dp;
@@ -537,7 +625,10 @@ public:
 		};
 	}
 
-	// Returns a t_meaning of type t_Q_M
+	// Returns a t_meaning containing type t_Q_M.
+	// Effectively, this is taking the component of a grammar's sentence
+	// that deals with defining a quantifier
+	// (which of the quantifiers is specified by i)
 	template< int i >
 	auto q_n () {
 		return t_meaning([this](t_context c) -> t_Q {
@@ -574,6 +665,7 @@ public:
 						return std::get<i>(o).i;
 					} catch (std::bad_function_call& e) {
 						std::cout << "here 2" << std::endl;
+						std::terminate();
 					}
 				};
 			};
@@ -581,6 +673,8 @@ public:
 	}
 
 	LexicalSemantics getLexicon() {
+		// the booleans are specifying which groups of words to include 
+		// in the lexicon, by their type.
 		LexicalSemantics lexSem{
 			true,
 			true,
@@ -593,59 +687,6 @@ public:
 		lexSem.add("Q3", q_n<3>());
 		return lexSem;
 	}
-
-	double compute_single_likelihood(const datum_t& x) override {
-		
-		// context is the first element of the input
-		t_context context = x.input;
-
-		t_BTC_compose compF = getCompositionF();
-		LexicalSemantics lexSem = getLexicon();
-
-		// output: a SExpr representation of the parseTree 
-		const std::unique_ptr<BTC> parseTree = 
-			BTC::fromSExpression(x.output,lexSem);
-
-		try{
-			// outputMeaning will contain type t_t_M
-			t_meaning outputMeaning = parseTree->compose(compF);
-			try 
-			{
-				auto f = std::get<t_t_M>(outputMeaning); 
-				t_t out = f(context);
-				double logp =
-					out
-					? log(x.reliability + (1.0-x.reliability)/2.0) 
-					: log((1.0-x.reliability)/2.0);
-
-				return logp;
-			}
-			catch (std::bad_variant_access&) 
-			{
-				// if the variant is not of type t_t_M, return -inf
-				return -std::numeric_limits<double>::infinity();
-			}
-		} catch (PresuppositionFailure& e) {
-			// if the composition fails, return -inf
-			return -std::numeric_limits<double>::infinity();
-		}
-	}
-
-	static data_t dataFilter(data_t data) {
-		auto substrings = std::vector<std::string>{"Q1","Q2","Q3"};
-		data_t filteredData;
-		for (auto& d : data) {
-			for (const auto& substring : substrings) {
-				if (d.output.find(substring) != std::string::npos) {
-					filteredData.push_back(d);
-					// break out of the inner loop
-					break;
-				}
-			}
-		}
-
-		return filteredData;
-	}
+	
 };
-
 

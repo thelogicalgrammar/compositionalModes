@@ -234,8 +234,8 @@ public:
 			}
 		);
 		
-		// add (common) names for the numbers 0 to 9
-		for (int i = 0; i < 10; i++) {
+		// add (common) names for the numbers 0 to 5
+		for (int i = 0; i < 6; i++) {
 			add(
 				std::to_string(i),
 				[i](t_context c) -> t_IV {
@@ -416,6 +416,7 @@ private:
 				std::unique_ptr<BTC> l,
 				std::unique_ptr<BTC> r
 		) : left(std::move(l)), right(std::move(r)) {}
+
     };
 
 	// The data stored in the BTC node
@@ -425,7 +426,7 @@ private:
 	// from an S-expression and a lexicon
     static std::unique_ptr<BTC> parseAndBuild(
 			std::istringstream& ss,
-			LexicalSemantics& lex
+			const LexicalSemantics& lex
 		) {
 
         std::string token;
@@ -556,7 +557,7 @@ public:
 	// Static method to create a BTC tree from an S-expression
     static std::unique_ptr<BTC> fromSExpression(
 			const std::string& sExpr,
-			LexicalSemantics& lex
+			const LexicalSemantics& lex
 		) {
 
         std::istringstream ss(sExpr);
@@ -565,9 +566,13 @@ public:
 
 	// Method to convert the BTC to an S-expression
     std::string toSExpression() const {
+		// If the node is a terminal node,
+		// return the description
         if (std::holds_alternative<t_meaning>(data)) {
             return description;
         } else {
+			// If the node is not a terminal node,
+			// return the S-expression of the left and right children
             const auto& children = std::get<Children>(data);
             std::string leftExpr = children.left ? 
 				children.left->toSExpression() : 
@@ -662,6 +667,7 @@ public:
 		}
 	}
 
+	// check if the tree contains any of the names
 	bool contains(const std::vector<std::string>& names) const {
 		for (const auto& name : names) {
 			if (contains(name)) {
@@ -671,5 +677,31 @@ public:
 		return false;
 	}
 
+	std::unique_ptr<BTC> copy() const {
+		if (std::holds_alternative<t_meaning>(data)) {
+			return std::make_unique<BTC>(
+				std::get<t_meaning>(data),
+				description
+			);
+		} else {
+			const auto& children = std::get<Children>(data);
+			return std::make_unique<BTC>(
+				children.left->copy(),
+				children.right->copy()
+			);
+		}
+	}
+
 };
 
+
+std::vector<std::unique_ptr<BTC>> copyBTCVec(
+		const std::vector<std::unique_ptr<BTC>>& vec
+	) {
+	std::vector<std::unique_ptr<BTC>> out;
+	for (auto& btc : vec) {
+		std::unique_ptr<BTC> btcCopy = btc->copy();
+		out.push_back(std::move(btcCopy));
+	}
+	return out;
+}

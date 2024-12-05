@@ -6,6 +6,14 @@ using t_BTC_dist = std::tuple<
 	std::discrete_distribution<>
 >;
 
+// an enum to represent whether the agent
+// searches for an utterance by sampling
+// or by enumeration
+enum class SearchType {
+	SAMPLE,
+	ENUMERATE
+};
+
 // Context variations are contexts
 // that differ from the observed context
 // only in what is a target and what a distractor.
@@ -57,12 +65,7 @@ private:
 	double leafProb;
 	double alpha;
 	double sizeScaling;
-	int learningSamples;
 	
-	// top stores the top hypotheses we have found
-	TopN<Hyp> top{size_t{100}};
-	bool hasTop = false;
-
 	// the chosen hypothesis
 	Hyp chosenHyp;
 	bool hasChosenHyp = false;
@@ -253,131 +256,22 @@ public:
 	Agent() {
 		// initialize the maximum depth of utterances
 		initialMaxDepth = 4;
-		// initialize the number of samples
-		nSamples = 5000;
 		// initialize the probability of creating a leaf node.
 		// for 0.6, the expected depth is ~2.4
 		leafProb = 0.6;
-		alpha = 3;
+		alpha = 5;
 		// Scale the size of the utterances when computing complexity
-		sizeScaling = 0.2;
-		learningSamples = 50000;
+		/* sizeScaling = 0.2; */
+		sizeScaling = 0.0;
+		// initialize the number of sampled random utterances
+		// to pick one to refer to the state
+		// Onliy used in the case of sampling
+		nSamples = 5000;
 	}
 
 	Agent( typename Hyp::Grammar_t* grammar, std::string parseable ) : Agent(){
 		std::cout << "Agent: " << parseable << std::endl;
 		this->setHypothesis(Hyp(parseable));
-	}
-
-	void mutate() {
-		// Mutate the agent's hypothesis.
-		
-		// Propose a variation of the agent's hypothesis
-		std::optional<std::pair<Hyp,double>> mutatedData = 
-			this->getHypothesis().propose();
-		// Get the mutated hypothesis and set it as the agent's hypothesis
-		if (mutatedData.has_value()) {
-			auto[mutatedHyp,logq] = mutatedData.value();
-			// record original
-			originalHyp = this->getHypothesis();
-			mutated = true;
-			// set new
-			this->setHypothesis(mutatedHyp);
-			std::cout << std::endl;
-			std::cout << "Mutated the agent!" << std::endl;
-			std::cout 
-				<< "original: " 
-				<< originalHyp.value().string() 
-				<< std::endl;
-			std::cout 
-				<< "mutated:  " 
-				<< mutatedHyp 
-				<< std::endl;
-			std::cout << std::endl;
-		} else {
-			// warn that mutation failed
-			std::cout << "Mutation failed!" << std::endl;
-		}
-	}
-
-	TopN<Hyp> getTop() const {
-		if (!hasTop) {
-			throw std::runtime_error("No top defined!");
-		}
-		return this->top;
-	}
-
-	Hyp::data_t randomInitializationFromString(
-			std::mt19937 rng,
-			std::vector<t_context> observations,
-			LexicalSemantics lex,
-			double pRight
-		){
-		typename Hyp::data_t mydata;
-		// generate random combinations of utterances and contexts
-		// without a true underlying hypothesis
-		auto lexNames = lex.getNames();
-		for(size_t i=0;i<observations.size();i++){
-			t_context c = observations[i];
-			// TODO: Sample a random utterance
-			std::string utt = BTC::randomSExpression(lexNames, rng);
-			typename Hyp::datum_t datum{c,utt,pRight};
-			mydata.push_back(datum);
-		}
-		return mydata;
-	}
-	
-	Hyp::data_t randomInitializationFromHypothesis(
-			std::mt19937 rng,
-			std::vector<t_context> observations,
-			double pRight
-		){
-
-		bool allDefined;
-		Hyp trueH;
-		typename Hyp::data_t mydata;
-		// The problem of random initialization in this case
-		// is to find a composition function
-		// that can compose into sentences of type t 
-		// for the observed contexts
-		do {
-			// reset mydata
-			mydata.clear();
-			allDefined = true;
-			// Sample a random hypothesis
-			// containing a composition function
-			trueH = Hyp::sample();
-			t_BTC_compose trueComposeF = trueH.getCompositionF();
-			t_cfgMap cfgMap = this->generateCFGMap(trueComposeF);
-			for(size_t i=0;i<observations.size();i++){
-				t_context c = observations[i];
-				std::optional<t_BTC_dist> produced = 
-					this->produce(trueH, c, rng);
-				// if the speaker did not produce anything, 
-				// break out of the loop
-				if(!produced.has_value()){
-					allDefined = false;
-					break; // Exit the for loop early
-				}
-				
-				// Get the array of utterances and their probabilities
-				auto utts = std::move(std::get<0>(produced.value()));
-				/* std::cout << "Utterances: " << std::endl; */
-				/* // note that u is unique_ptr */
-				/* for(auto& u : utts){ */
-				/* 	std::cout << u.get()->toSExpression() << std::endl; */
-				/* } */
-				auto utts_probs = std::get<1>(produced.value());
-				// Choose an utterance
-				int chosen_index = utts_probs(rng);
-				// Get the chosen utterance as an S-expression
-				std::string utt = utts[chosen_index].get()->toSExpression();
-				typename Hyp::datum_t datum{c,utt,pRight};
-				mydata.push_back(datum);
-			}
-		} while(!allDefined);
-		this->setHypothesis(trueH);
-		return mydata;
 	}
 
 	double communicativeAccuracy(
@@ -388,7 +282,7 @@ public:
 		assert(hasChosenHyp&&"No hypothesis has been set yet");
 
 		// print length of data
-		std::cout << "Length of data: " << data.size() << std::endl;
+		/* std::cout << "Length of data: " << data.size() << std::endl; */
 
 		// Communicative accuracy is the total surprisal
 		// of the listener over the unobserved data
@@ -403,9 +297,7 @@ public:
 			// Get the second element of each tuple in context
 			// which says whether the element is a target
 			std::vector<bool> targets;
-			for (auto elem : c) {
-				targets.push_back(std::get<1>(elem));
-			}
+			for (auto elem : c) { targets.push_back(std::get<1>(elem)); }
 			// Get the utterance as a string
 			std::string utt = datum.output;
 			// interpret the utterance, which gives the 
@@ -429,9 +321,12 @@ public:
 			}
 			cumCA += CA;
 
-			std::cout << datum << probs << "	: " << CA << std::endl;
+			/* std::cout << datum << probs << "	: " << CA << std::endl; */
 
 		}
+		// normalize by the number of observations
+		// to get the average surprisal of an observation
+		cumCA /= data.size();
 		std::cout << std::endl;
 		return cumCA;
 	}
@@ -450,42 +345,52 @@ public:
 			t_terminalsMap& terminalsMap,
 			std::mt19937& rng
 		) const {
-		// Considers a bunch of random utterances
+
+		t_BTC_vec sentences;
+		// finds a bunch of random utterances
 		// that are all true of the context
-		t_BTC_vec sentences = 
-			generateRandomBTCsWithEvaluation(
-				c, compositionFn, lex, terminalsMap, rng
-			);
+		sentences = generateRandomBTCsWithEvaluation(
+			c, compositionFn, lex, terminalsMap, rng
+		);
+
+		std::optional<t_BTC_dist> maybedist = produce(
+			c, compositionFn, lex, terminalsMap, rng, sentences
+		);
+		
+		return maybedist;
+	}
+
+	std::optional<t_BTC_dist> produce(
+			t_context c, 
+			t_BTC_compose compositionFn,
+			LexicalSemantics& lex,
+			t_terminalsMap& terminalsMap,
+			std::mt19937& rng,
+			t_BTC_vec& sentences
+		) const {
 
 		if (sentences.size() == 0) {
 			// If the composition function cannot produce 
 			// sentences that are true of the context
 			// (e.g., randomly initialized composition function)
 			return std::nullopt;
-
 		} else {
 
 			// Calculates the utility of each sentence
 			std::vector<double> utilities;
 			for (auto& s : sentences) {
 
-				t_t_M meaning = std::get<t_t_M>(
-					s->compose(compositionFn)
-				);
+				t_t_M meaning = std::get<t_t_M>(s->compose(compositionFn));
 
 				// compute informativity
-				double info =
-					this->computeInformativity(
-						c, meaning
-					);
+				double info = this->computeInformativity(c, meaning);
+
 				// compute complexity (multiply by sizeScaling
 				// to make more comparable with info);
 				double complexity = 
-					this->computeComplexity(*s)*this->sizeScaling;
+					this->computeComplexity(*s) * this->sizeScaling;
 
-				double utility = std::exp(this->alpha*(
-					info - complexity
-				));
+				double utility = std::exp(this->alpha*(info - complexity));
 
 				/* s->printTree(this->lex); */
 				/* std::cout << "info: " << info << std::endl; */
@@ -538,11 +443,10 @@ public:
 
 	std::optional<std::string> produceSingleString(
 			t_context c, 
-			std::mt19937& rng
+			std::mt19937& rng,
+			const std::optional<t_BTC_dist>& maybedist
 		) const {
 
-		// Use the chosen hypothesis by default
-		std::optional<t_BTC_dist> maybedist = produce(c, rng);
 		if (maybedist.has_value()) {
 			// get the sentences and the distribution
 			const t_BTC_vec& sentences = std::get<0>(*maybedist);
@@ -553,6 +457,94 @@ public:
 		} else {
 			return std::nullopt;
 		}
+	}
+
+	std::optional<std::string> produceSingleString(
+			t_context c, 
+			std::mt19937& rng
+		) const {
+
+		// Use the chosen hypothesis by default
+		std::optional<t_BTC_dist> maybedist = produce(c, rng);
+		auto output = produceSingleString(c, rng, maybedist);
+		return output;
+	}
+
+	typename Hyp::data_t produceDataFromEnumeration(
+			std::vector<t_context> cs, 
+			std::mt19937& rng,
+			size_t searchDepth = 2
+		) const {
+
+		typename Hyp::data_t data;
+
+		auto trueHyp = this->getHypothesis();
+
+		// get everything from the trueHyp
+		LexicalSemantics lex 		= trueHyp.getLexicon();
+		t_terminalsMap terminalsMap = this->generateTerminalsMap(lex);
+		t_BTC_compose compositionFn = trueHyp.getCompositionF();
+
+		// Find all sentences
+		t_BTC_vec allSentences = enumerateSentences(
+				compositionFn,
+				lex,
+				terminalsMap,
+				searchDepth
+			);
+
+		// loop over contexts
+		for (auto& context : cs) {
+
+			// copy the sentences
+			auto copy = copyBTCVec(allSentences);
+
+			// select the true sentences in context
+			// NOTE: this moves the sentences
+			t_BTC_vec sentences = selectTrueSentences(
+					context,
+					compositionFn,
+					copy
+				);
+
+			/* // print out the trees */
+			/* int i = 0; */
+			/* for (auto& tree : sentences) { */
+			/* 	tree -> printTree(lex); */
+			/* 	std::cout << std::endl; */
+			/* 	i++; */
+			/* 	if (i > 10) { break; } */
+			/* } */
+			/* std::cout << "Number of trees: " << */ 
+			/* 	sentences.size() << std::endl; */
+
+			// Define a distribution over sentences
+			// NOTE: this moves the sentences
+			std::optional<t_BTC_dist> sentencesDist = produce(
+					context, 
+					compositionFn,
+					lex,
+					terminalsMap,
+					rng,
+					sentences
+				);
+
+			// Select a single string
+			std::optional<std::string> maybestring = produceSingleString(
+					context,
+					rng,
+					sentencesDist
+				);
+
+			if (maybestring.has_value()) {
+				data.push_back(typename Hyp::datum_t{
+					context, *maybestring, 1.0
+				});
+			} else {
+				throw std::runtime_error("No data produced");
+			}
+		}
+		return data;
 	}
 
 	typename Hyp::data_t produceData(
@@ -585,11 +577,13 @@ public:
 		) const {
 
 		std::vector<t_context> cs = generateContexts(
-			cSize,
-			nObs,
-			rng
-		);
+			cSize, nObs, rng);
 		return produceData(cs, rng, pRight);
+	}
+
+	typename Hyp::data_t produceData(
+			size_t cSize, size_t nObs, std::mt19937& rng) const {
+		return produceData(cSize, nObs, rng, 1.0);
 	}
 
 	// Goes from a sentence to the probability
@@ -673,60 +667,6 @@ public:
 		return interpret(sentence, observedC);
 	}
 	
-	void learn(Hyp::data_t data){
-		assert(!hasTop&&"Top already defined!");
-		
-		auto h0 = Hyp::sample();
-		ParallelTempering samp(
-			h0,
-			&data,
-			FleetArgs::nchains,
-			10.0
-		); 
-
-		std::cout << "Running parallel tempering..." << std::endl;
-
-		for(auto& h : samp.run(
-			Control(learningSamples)) | top | printer(FleetArgs::print)
-		){
-			// Add hypothesis to top
-			top << h;
-		}
-		hasTop = true;
-
-	}
-
-	void pickHypothesis(std::mt19937& rng){
-		// sample one hypothesis from the posterior in top
-
-		TopN<Hyp> localtop = getTop();
-		std::cout << "About to pick!" << std::flush;
-		assert(localtop.size() > 0);
-
-		// get the posterior
-		auto posterior = localtop.values();
-
-		// get the unnormalized probabilities
-		std::vector<double> probs;
-		for (auto& h : posterior) {
-			probs.push_back(h.posterior);
-		}
-
-		// create a discrete distribution
-		t_discr_dist dist(
-			probs.begin(),
-			probs.end()
-		);
-
-		// sample from the distribution
-		int index = dist(rng);
-
-		// set the chosen hypothesis
-		auto it = posterior.begin();
-		std::advance(it, index);
-		this->setHypothesis(*it);
-	}
-
 	void setHypothesis(Hyp h){
 		if (hasChosenHyp) {
 			std::cout << "WARNING: Overwriting chosen hypothesis!" << std::endl;
@@ -740,15 +680,6 @@ public:
 		return chosenHyp;
 	}
 
-	bool wasMutated() const {
-		return mutated;
-	}
-
-	Hyp getOriginalHypothesis() const {
-		assert(mutated&&"Hypothesis was not mutated!");
-		return originalHyp.value();
-	}
-	
 	// This function takes a lexical semantics
 	// and returns a map from each type in t_meaning
 	// to the lexical entries that have that type
@@ -818,9 +749,9 @@ public:
 	}
 
 	// This function takes a context and a composition function
-	// and returns a vector of BTCs
-	// that are true in that context.
-	// This belongs to agent because it encodes the way
+	// and returns a vector of BTCs that are true in that context,
+	// by searching the space of utterances.
+	// This function is part of the agent because it encodes the way
 	// the agent searches the space of utterances.
 	// Excludes BTCs that are:
 	// - false in context
@@ -855,7 +786,9 @@ public:
 			);
 
 			if (!maybeBtc.has_value()) {
-				// If the tree is invalid, skip this iteration
+				// If the tree is invalid,
+				// e.g., because of presupposition failure,
+				// skip this iteration
 				continue;
 			} else {
 
@@ -923,4 +856,151 @@ public:
 		return validBTCs;
 	}
 
+	t_BTC_vec enumerateBTCsWithEvaluation(
+		const std::string& typeName,
+        int maxDepth,
+        const t_cfgMap& cfgMap,
+        const LexicalSemantics& lex,
+        const t_terminalsMap& terminalsMap
+	) const {
+
+		std::vector<std::unique_ptr<BTC>> trees;
+
+		// Base case: If maxDepth < 0, no trees can be created
+		if (maxDepth < 0) {
+			return trees;
+		}
+
+		// If typeName exists in the terminalsMap, create leaf nodes
+		auto terminals = terminalsMap.find(typeName);
+		if (terminals != terminalsMap.end()) {
+			for (const auto& terminal : terminals->second) {
+				trees.push_back(std::make_unique<BTC>(
+					lex.at(terminal), terminal
+				));
+			}
+		}
+
+		// If typeName exists in the cfgMap, create non-leaf nodes
+		auto cfgIt = cfgMap.find(typeName);
+		if (cfgIt != cfgMap.end()) {
+			for (const auto& childTypes : cfgIt->second) {
+
+				const std::string& leftType = std::get<0>(childTypes);
+				const std::string& rightType = std::get<1>(childTypes);
+
+				// Recursively enumerate left and right children
+				auto leftTrees = enumerateBTCsWithEvaluation(
+					leftType,
+					maxDepth - 1,
+					cfgMap,
+					lex,
+					terminalsMap
+				);
+				auto rightTrees = enumerateBTCsWithEvaluation(
+					rightType,
+					maxDepth - 1,
+					cfgMap,
+					lex,
+					terminalsMap
+				);
+
+				// Combine left and right children into non-leaf nodes
+				for (const auto& leftTree : leftTrees) {
+					for (const auto& rightTree : rightTrees) {
+						std::string sExpr = "( " 
+							+ leftTree->toSExpression() 
+							+ " " 
+							+ rightTree->toSExpression() 
+							+ " )";
+						trees.push_back(BTC::fromSExpression(sExpr, lex));
+					}
+				}
+			}
+		}
+
+		return trees;
+	}
+
+	t_BTC_vec enumerateSentences(
+				t_BTC_compose compositionFn,
+				LexicalSemantics& lex,
+				t_terminalsMap& terminalsMap,
+				size_t searchDepth = 2
+			) const {
+
+		t_BTC_vec sentences;
+
+		t_cfgMap cfgMap = this->generateCFGMap(compositionFn);
+
+		auto possibleUtts = enumerateBTCsWithEvaluation(
+			"<s,t>",
+			searchDepth,
+			cfgMap,
+			lex,
+			terminalsMap
+		);
+
+		// filter out the sentences that do not contain
+		// 'target' or 'distractor'
+		for (auto& utt : possibleUtts) {
+			// if the sentence does not contain 'target'
+			// or 'distractor', then we can ignore it
+			// since it does not give us any information
+			// about what's a target and what's a distractor.
+			// Remove these sentences from the set of possible
+			// utterances.
+			if (!utt->contains("target") && !utt->contains("distractor")) { 
+				continue; 
+			} else {
+				// append sentence to sentences
+				sentences.push_back(std::move(utt));
+			}
+		}
+
+		return sentences;
+	}
+
+	t_BTC_vec selectTrueSentences(
+				t_context c,
+				t_BTC_compose compositionFn,
+				t_BTC_vec& possibleUtts
+			) const {
+
+		t_BTC_vec sentences;
+
+		// find the sentences that are true of the context
+		for (auto& utt : possibleUtts) {
+
+			// Evaluate the tree into a meaning of type <s,t>
+			t_meaning result = utt->compose(compositionFn);
+
+			// Apply the result to the context to get a bool
+			t_extension extension = std::visit(
+				[&c](auto&& result_M) {
+					// All meanings are functions from 
+					// contexts to something in t_extension
+					// NOTE: Need to explicitly cast to t_extension
+					// rather than directly return
+					try {
+						return t_extension(result_M(c));
+					} catch (PresuppositionFailure& e) {
+						// If there is a presupposition failure
+						// return Empty{}
+						return t_extension(Empty{});
+					}
+				},
+				result
+			);
+
+			if (
+				std::holds_alternative<t_t>(extension) && 
+				std::get<t_t>(extension)
+			) {
+				sentences.push_back(std::move(utt));
+			} 
+		}
+		
+		return sentences;
+	}
 };

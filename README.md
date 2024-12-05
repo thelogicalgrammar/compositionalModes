@@ -22,7 +22,7 @@ The syntax consists just of binary-branching trees. The syntax is semantically t
 
 The semantic system has two components.
 
-The interpretation function: assigns a meaning to each word in the language. The meanings are intensional, meaning that their types is function from a 'world' to some extension.
+The lexical interpretation function: assigns a meaning to each word in the language. The meanings are intensional, meaning that their types is function from a 'world' to some extension.
 
 The composition function: constructs the meaning of a whole sentence by recursively taking the meaning of two nodes of the tree and returning a meaning.
 
@@ -30,9 +30,9 @@ The composition function: constructs the meaning of a whole sentence by recursiv
 
 The model's meanings essentially follow an intensional version of the Heim & Krazter's model. The extensions includes `e`, `t`, and some types recursively defined from these. The meanings are functions `<s,\phi>` for some extensional type `\phi`.
 
-The main difficulty is getting around C++'s rigid typing system. To do so, I used `std::variant` types to encode a general 'meaning' type. This meaning type can take on any of a manually specified list of semantic types. I included a list of the commonly discussed ones.
+The main difficulty is getting around C++'s rigid typing system. In particular, the composition function needs to take meanings of different types and returns meanings of different types. To do so, I used `std::variant` types to encode a general 'meaning' type. This meaning type can take on any of a manually specified list of semantic types. I included a list of the commonly discussed ones. Unfortunately, this makes everything more complicated. Sometimes you eat the bear and sometimes the bear eats you.
 
-The meaning variant type also contains an `Empty` type that indicates an object that is meaningless. This simplifies the implementation of various things.
+The meaning variant type also contains an `Empty` type that indicates an object that is meaningless. This simplifies the implementation of various things, such as the composition function and the presupposition failure mechanism.
 
 ## Learning / evolution
 
@@ -40,9 +40,9 @@ The evolution happens for a part of the language that is learned in each generat
 
 ## The tricky bits
 
-- Whether the composition function returns an Empty meaning should depend *only* on the *types* of the input meanings, but not on things that depend on context or other features. This is because, in order to make the search over meaningful sentences more efficient, we construct a CFG based on checking whether the composition function returns empty for various combinations of input types, and then produce sentences from the CFG.
-- There is also a way of dealing with presupposition failure which doesn't interfere with the construction of the CFG.
-- The BTCs are unique pointers (for various reasons), and I did not yet implemented copy semantics. Easier to pass them around as SExpressions and interpret them as needed.
+- Whether the composition function returns an Empty meaning must depend *only* on the *types* of the input meanings, but not on e.g., context or other semantic features. This is because, in order to make the search over meaningful sentences more efficient, the simulation constructs a CFG based on checking whether the composition function returns empty for various combinations of input types, and then produce sentences from the CFG.
+- There is also a way of dealing with presupposition failure which doesn't interfere with the construction of the CFG. Essentially, a presupposition function exception is raised. This is captured e.g. when searching a sentence for production.
+- The BTCs are unique pointers (for various reasons), and I did not yet implemented copy semantics. This means that they are messy to pass around directly. Easier to pass them around as SExpressions and interpret them as needed. This is not as efficient but saves a lot of headaches.
 
 ## Codebase roadmap
 
@@ -67,8 +67,6 @@ The evolution happens for a part of the language that is learned in each generat
 - Each file in `./LoT` implements:
 	1. A Fleet Grammar
 	2. A Fleet Hypothesis. This needs to have (on top of usual Fleet stuff) two additional methods:
-		- `getCompositionF`: Returns an object of type `t\_BTC\_compose`.
+		- `getCompositionF`: Returns an object of type `t\_BTC\_compose`, which takes two meanings and returns a meaning.
 		- `getLexicon`: Returns a LexicalSemantics. This is the only entry point for the agent's LexicalSemantics; The agent doesn't keep one a separate one of its own. However, note that the Hypothesis can trivially return a default initialized LexicalSemantics.
 
-
- 

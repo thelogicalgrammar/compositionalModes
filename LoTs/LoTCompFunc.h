@@ -236,7 +236,6 @@ namespace COMP_DSL{
 			);
 		};
 
-	// Helper function to define binary operations on properties
 	t_BTC_compose propUnion = 
 		+[](t_meaning leftM, t_meaning rightM) -> t_meaning {
 			return std::visit(
@@ -548,7 +547,7 @@ public:
 		/* 	+[](int s, int n) -> int { return s + n; }); */
 		/* add("tens(%s)", */    
 		/* 	+[](int n) -> int {return n*10; }); */
-		for(int i=1;i<=10;i++) {
+		for(int i=0;i<=5;i++) {
 			add_terminal( "#"+str(i), i, 0.05);
 		}
 
@@ -613,7 +612,7 @@ public:
 
 // Define CompHypothesis
 
-class MyHypothesis final : public DeterministicLOTHypothesis<
+class MyHypothesis : public DeterministicLOTHypothesis<
 	MyHypothesis,
 	t_input,
 	t_meaning,

@@ -101,14 +101,19 @@ using t_meaning = std::variant<
 
 // Define the types of the composition function
 // i.e., a meaning transformation
+
 using t_BTC_compose = 
 	std::function< t_meaning(t_meaning, t_meaning) >;
+
 using t_BTC_transform = 
 	std::function< t_meaning(t_meaning) >;
+
 using t_BTC_PtoE =
 	std::function<t_e(t_context,t_IV_M)>;
+
 using t_BTC_chooseF =
 	std::function<t_BTC_PtoE(int)>;
+
 using t_TandTtoT = 
 	std::function<t_t(t_t,t_t)>;
 
@@ -135,16 +140,7 @@ using t_terminalsMap =
 
 using t_contextVector = std::vector<t_context>;
 
-// Type of single data for the Hypotheses
-// input is a context and output a sentence
+// Type of single datapoint for the Hypotheses.
+// The input is a context and the output is a sentence
 using t_datum = defaultdatum_t<t_context,std::string>;
-
-
-// Define types for IL
-using twoDDouble = std::vector<std::vector<double>>;
-
-enum class HypothesisInit {
-	HYPOTHESIS,
-	RANDOMSTRING
-};
 
