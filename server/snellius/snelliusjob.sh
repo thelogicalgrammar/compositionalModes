@@ -20,11 +20,11 @@ make
 ID=$(date +"%Y%m%d_%H%M%S")
 ./main \
 	--steps 			100000 	 		\
-	--nobs 				100	 	 		\
+	--nobs 				50	 	 		\
 	--csize 			5 		 		\
 	--likelihoodweight 	30	 			\
 	--searchdepth		2		 		\
-	--fname 			"data/${ID}/{}" \
+	--fname 			"data/${ID}"	\
 	--ct				16
 	
 
