@@ -1,6 +1,5 @@
 #!/bin/bash
-#SBATCH --ntasks 64
-#SBATCH --cpus-per-task 1
+#SBATCH --ntasks 16
 #SBATCH -p rome
 #SBATCH -t 100:00:00
 
@@ -26,7 +25,7 @@ ID=$(date +"%Y%m%d_%H%M%S")
 	--likelihoodweight 	30	 			\
 	--searchdepth		2		 		\
 	--fname 			"data/${ID}/{}" \
-	--ct				64
+	--ct				16
 	
 
 # ./main --steps 10000 --nobs 100 --likelihoodweight 50 --chains 16
