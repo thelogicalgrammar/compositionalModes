@@ -19,16 +19,14 @@ make
 
 # ID is a string with current time
 ID=$(date +"%Y%m%d_%H%M%S")
-seq 1 64 | parallel -j 64 ./main \
-	--ngenerations 	100 	 \
-	--nagents 		10 		 \
-	--nobs 			100	 	 \
-	--csize 		5 		 \
-	--pright 		0.9999 	 \
-	--pmutation		0.0		 \
-	--commselectionstrength 0.5 \
-	--fname "data/${ID}/{}" \
-	--ct			4
+./main \
+	--steps 			100000 	 		\
+	--nobs 				100	 	 		\
+	--csize 			5 		 		\
+	--likelihoodweight 	30	 			\
+	--searchdepth		2		 		\
+	--fname 			"data/${ID}/{}" \
+	--ct				64
 	
 
-# ./main --ngenerations 1000 --nagents 16 --nobs 100 --csize 5 --pright 0.9999 --pmutation 0.05 --fnameaddition "" --ct 4
+# ./main --steps 10000 --nobs 100 --likelihoodweight 50 --chains 16

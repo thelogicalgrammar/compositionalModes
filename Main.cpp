@@ -61,11 +61,11 @@ int main(int argc, char** argv) {
 
 	// Adding some command line options that I need below
 
-	size_t nObs 		= 50;
-	size_t cSize 		= 5;
+	size_t nObs 			= 50;
+	size_t cSize 			= 5;
 	double likelihoodWeight = 1;
-	double searchDepth = 2;
-	std::string fname = "";
+	double searchDepth 		= 2;
+	std::string fname 		= "./data/tradeoff/";
 
 	fleet.add_option<size_t>(
 		"--nobs",
@@ -220,7 +220,7 @@ int main(int argc, char** argv) {
 
 		case SimulationType::TRADEOFF: {
 
-			auto results = runTradeoffAnalysis<QuantsHypothesis>(
+			TopN<QuantsHypothesis> results = runTradeoffAnalysis<QuantsHypothesis>(
 				// number of samples to estimate communicative accuracy
 				nObs,
 				// size of contexts
@@ -234,6 +234,40 @@ int main(int argc, char** argv) {
 				// add this to the folder name 
 				fname
 			);
+
+			// Determine folder name and create
+			auto dir = std::filesystem::path(fname);
+
+			try {
+				// create directory if it doesn't exist
+				std::filesystem::create_directories(dir);
+			} catch (const std::filesystem::filesystem_error& e) {
+				std::cerr 
+					<< "Error while creating dir" 
+					<< e.what() 
+					<< std::endl;
+			}
+
+			// save parameters to json file
+			std::filesystem::path jpath = dir / "parameters.json";
+			std::ofstream jfile(jpath);
+			nlohmann::json j;
+			j["nobs"] = nObs;
+			j["csize"] = cSize;
+			j["likelihoodweight"] = likelihoodWeight;
+			j["searchdepth"] = searchDepth;
+			jfile << j.dump() << std::endl;
+
+			// save results to file with likelihood weight and nObs
+			std::filesystem::path filepath = 
+				dir / (
+					"likweight_" + std::to_string(likelihoodWeight) 
+					+ "_nobs_" + std::to_string(nObs) 
+					+ ".json"
+				);
+
+			saveResults<QuantsHypothesis>(filepath, results);
+
 			break;
 		}
 	}

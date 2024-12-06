@@ -9,8 +9,7 @@
 using json = nlohmann::json;
 
 
-std::ostream& operator<<(
-		std::ostream& os, const t_context& context) {
+std::ostream& operator<<(std::ostream& os, const t_context& context) {
 	// Print the context
 	// which is a set of e
 	// e.g., { (1, true), (2, false) }
@@ -27,8 +26,7 @@ std::ostream& operator<<(
 	return os;
 }
 
-std::ostream& operator<<(
-		std::ostream& os, const t_terminalsMap& terminals) {
+std::ostream& operator<<(std::ostream& os, const t_terminalsMap& terminals) {
 
 	for (auto& [k, v] : terminals) {
 		// print the key and the value
@@ -42,8 +40,7 @@ std::ostream& operator<<(
 	return os;
 }
 
-std::ostream& operator<<(
-	std::ostream& os, const std::vector<double>& v) {
+std::ostream& operator<<(std::ostream& os, const std::vector<double>& v) {
 	// Print the vector
 	// e.g., [ 1, 2, 3 ]
 	os << "[ ";
@@ -106,3 +103,46 @@ std::string generateUniqueSuffix() {
 }
 
 
+// This is used implicitly by the json library
+// to serialize the defaultdatum_t
+template <typename TDatum>
+void to_json(nlohmann::json& j, const TDatum& d) {
+    j = nlohmann::json{
+        {"input", d.input},          
+        {"output", d.output}
+    };
+}
+
+template <typename Hyp>
+void saveResults(const std::filesystem::path& filename, 
+				 const TopN<Hyp>& results) {
+	// Save the results to a file
+	std::ofstream file(filename);
+
+	json j;
+
+	std::string topNSerialized = results.serialize();
+	j["topNSerialized"] = topNSerialized;
+
+	j["topN"] = json::array();
+	for (auto& h : results.sorted()) {
+		json jH;
+		jH["posterior"] = h.posterior;
+		jH["prior"] = h.prior;
+		jH["likelihood"] = h.likelihood;
+		jH["hypothesisSerialized"] = h.serialize();
+		jH["hypothesis"] = h.string();
+		jH["data"] = json::array();
+		auto data = h.getCommData();
+		for (auto& d : data) {
+			h.getCommData();
+			jH["data"].push_back(d);
+		}
+		j["topN"].push_back(jH);
+	}
+
+	// the 4 is the indentation
+	file << j.dump(4) << std::endl;
+	file.close();
+
+}

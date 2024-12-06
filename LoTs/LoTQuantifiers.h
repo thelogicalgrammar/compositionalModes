@@ -485,6 +485,8 @@ private:
 	// Maximum depth of signals when enumerating utterances
 	// to estimate communicative accuracy
 	static inline size_t searchDepth = 2;
+	// For storing
+	static inline data_t commData;
 
 public:
 	using Super = DeterministicLOTHypothesis<
@@ -514,6 +516,10 @@ public:
 		grammar.GRAMMAR_MAX_DEPTH = 50;
 	}
 
+	data_t getCommData() {
+		return commData;
+	}
+
 	double compute_likelihood(const data_t& x,
 							  const double breakout=-infinity) override {
 		// NOTE: Here I disregard the data,
@@ -529,8 +535,7 @@ public:
 		std::vector<t_context> cs = generateContexts(cSize, nObs, local_rng);
 
 		// produce data for approximating communicative accuracy
-		data_t commData =
-			agent.produceDataFromEnumeration(cs, local_rng, searchDepth);
+		commData = agent.produceDataFromEnumeration(cs, local_rng, searchDepth);
 
 		// the new agent computes its communicative accuracy
 		double commAcc = agent.communicativeAccuracy(commData, local_rng);
