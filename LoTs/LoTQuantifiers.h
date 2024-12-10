@@ -527,14 +527,6 @@ public:
 		// since the likelihood only depends on communicative accuracy
 		// which I calculate inside this function.
 		
-		// print parameters
-		std::cout << "Setting parameters:" << std::endl;
-		std::cout << "nObs: " << nObs << ", " << this->nObs << std::endl;
-		std::cout << "cSize: " << cSize << ", " << this->cSize << std::endl; 
-		std::cout << "lw: " << likelihoodWeight << ", " << this->likelihoodWeight << std::endl;
-		std::cout << "searchDepth: " << searchDepth << ", " << this->searchDepth << std::endl;
-		std::cout << std::endl;
-
 		// Agent to calculate communicative accuracy with.
 		Agent<QuantsHypothesis> agent{};
 

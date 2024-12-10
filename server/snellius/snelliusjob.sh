@@ -27,5 +27,4 @@ ID=$(date +"%Y%m%d_%H%M%S")
 	--fname 			"data/${ID}"	\
 	--ct				16
 	
-
 # ./main --steps 10000 --nobs 100 --likelihoodweight 50 --chains 16
