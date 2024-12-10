@@ -31,7 +31,7 @@ make debug
 # 	--fname 			"data/${ID}"	\
 # 	--ct				16
 
-gdb -batch -ex "run" -ex "thread apply all backtrace full" -ex "quit" ./main \
+gdb -batch -ex "run" -ex "thread apply all backtrace full" -ex "quit" --args ./main \
 	--steps 			100000 	 		\
 	--nobs 				50	 	 		\
 	--csize 			5 		 		\
