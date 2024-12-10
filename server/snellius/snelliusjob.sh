@@ -3,6 +3,8 @@
 #SBATCH -p rome
 #SBATCH -t 100:00:00
 
+ulimit -s unlimited
+
 # Run this code in a file with source setup.sh
 module load 2022
 # Turns out that g++-11 works for compiling the models
@@ -27,5 +29,17 @@ ID=$(date +"%Y%m%d_%H%M%S")
 	--fname 			"data/${ID}"	\
 	--ct				16
 	
+RET=$?
+if [ $RET -ne 0 ]; then
+    if [ -f core ]; then
+        echo "Program crashed with exit code $RET. Generating backtrace..."
+        gdb -batch -ex "thread apply all backtrace full" -ex "quit" ./main core > backtrace.txt
+        echo "Backtrace saved to backtrace.txt"
+    else
+        echo "Program crashed but no core file found."
+    fi
+fi
+
+# ./main --steps 10000 --nobs 5 --csize 5 --likelihoodweight 30 --searchdepth 2 --fname "data/10" --ct 16
 
 # ./main --steps 10000 --nobs 100 --likelihoodweight 50 --chains 16
