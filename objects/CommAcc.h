@@ -23,6 +23,9 @@ void estimateCommAcc(
 	){
 
 	Agent<Hyp> agent(&grammar, stringRepr);
+
+	Hyp::setParams(nObs, cSize, likelihoodWeight, rng, searchDepth);
+
 	std::cout 
 		<< "Value: " 
 		<< agent.getHypothesis().string() 
@@ -32,13 +35,18 @@ void estimateCommAcc(
 	std::vector<double> logliks;
 	for (int i = 0; i < 500; i++) {
 
+		std::cout << "Generating contexts " << i << std::endl;
 		std::vector<t_context> cs = generateContexts(cSize, nObs, rng);
 
 		// produce data for approximating communicative accuracy
+		std::cout << "Producing data from enumeration" << std::endl;
 		typename Hyp::data_t commData = agent.produceDataFromEnumeration(
 				cs, rng, searchDepth);
+		/* typename Hyp::data_t commData = agent.produceData( */
+		/* 		cs, rng, searchDepth); */
 
 		// the new agent computes its communicative accuracy
+		std::cout << "Calculating communicative accuracy" << std::endl;
 		double commAcc = agent.communicativeAccuracy(commData, rng);
 
 		// The likelihood is the weighted sum of the communicative accuracy

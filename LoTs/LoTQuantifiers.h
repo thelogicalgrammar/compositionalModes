@@ -504,6 +504,7 @@ public:
 						  double likelihoodWeight,
 						  std::mt19937& local_rng,
 						  size_t searchDepth) {
+
 		QuantsHypothesis::nObs = nObs;
 		QuantsHypothesis::cSize = cSize;
 		QuantsHypothesis::likelihoodWeight = likelihoodWeight;
@@ -525,6 +526,14 @@ public:
 		// NOTE: Here I disregard the data,
 		// since the likelihood only depends on communicative accuracy
 		// which I calculate inside this function.
+		
+		// print parameters
+		std::cout << "Setting parameters:" << std::endl;
+		std::cout << "nObs: " << nObs << ", " << this->nObs << std::endl;
+		std::cout << "cSize: " << cSize << ", " << this->cSize << std::endl; 
+		std::cout << "lw: " << likelihoodWeight << ", " << this->likelihoodWeight << std::endl;
+		std::cout << "searchDepth: " << searchDepth << ", " << this->searchDepth << std::endl;
+		std::cout << std::endl;
 
 		// Agent to calculate communicative accuracy with.
 		Agent<QuantsHypothesis> agent{};
@@ -662,10 +671,19 @@ public:
 							t_IV_w{x},
 							t_IV_w{y}
 						);
+						
+						// next line is causing segmentation fault
+						// when the hypothesis is called
+						/* std::cout << "here 0" << std::endl; */
+						/* std::cout << std::get<0>(tup) << std::endl; */
+						/* std::cout << std::get<1>(tup) << std::endl; */
+						/* std::cout << this << std::endl; */
+						/* std::cout << std::endl; */
+
 						// the relevant bit of the hypothesis
 						// takes a context and two IVs and returns
 						// a t_t
-						auto o = this->call(tup);
+			 			auto o = this->call(tup);
 						// get the unwrapped t_Q_M value
 						return std::get<i>(o).i;
 					} catch (std::bad_function_call& e) {

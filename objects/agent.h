@@ -270,7 +270,7 @@ public:
 	}
 
 	Agent( typename Hyp::Grammar_t* grammar, std::string parseable ) : Agent(){
-		std::cout << "Agent: " << parseable << std::endl;
+		std::cout << "Creating agent: " << parseable << std::endl;
 		this->setHypothesis(Hyp(parseable));
 	}
 
@@ -295,10 +295,10 @@ public:
 			// Get the context
 			t_context c = datum.input;
 			// Get the second element of each tuple in context
-			// which says whether the element is a target
+			// which says whether the element is a target.
 			std::vector<bool> targets;
 			for (auto elem : c) { targets.push_back(std::get<1>(elem)); }
-			// Get the utterance as a string
+			// Get the utterance *as a string*
 			std::string utt = datum.output;
 			// interpret the utterance, which gives the 
 			// P(i is a target|utterance) for each i in context
@@ -477,7 +477,6 @@ public:
 		) const {
 
 		typename Hyp::data_t data;
-
 		auto trueHyp = this->getHypothesis();
 
 		// get everything from the trueHyp
@@ -590,16 +589,14 @@ public:
 	// that each element in the context is a target
 	std::vector<double> interpret(
 			// The agent sees a full sentence
-			std::unique_ptr<BTC>& s,
+			const std::unique_ptr<BTC>& s,
 			// we need the context but don't look at target value
 			t_context observedC,
 			t_BTC_compose compositionFn
 		) const {
 			
 		// get sentence meaning
-		t_t_M meaning = std::get<t_t_M>(
-			s->compose(compositionFn)
-		);
+		t_t_M meaning = std::get<t_t_M>(s->compose(compositionFn));
 		
 		// loop over all possible contexts and compute the probability 
 		// of each element in the context being a target given the sentence.
@@ -646,17 +643,6 @@ public:
 	}
 
 	std::vector<double> interpret(
-			std::unique_ptr<BTC>& s,
-			t_context observedC
-		) const {
-		return interpret(
-			s,
-			observedC,
-			this->getHypothesis().getCompositionF()
-		);
-	}
-
-	std::vector<double> interpret(
 			std::string s,
 			t_context observedC
 		) const {
@@ -664,7 +650,11 @@ public:
 		LexicalSemantics lex = this->getHypothesis().getLexicon();
 		// get the sentence
 		std::unique_ptr<BTC> sentence = BTC::fromSExpression(s, lex);
-		return interpret(sentence, observedC);
+		return interpret(
+			sentence,
+			observedC,
+			this->getHypothesis().getCompositionF()
+		);
 	}
 	
 	void setHypothesis(Hyp h){
