@@ -23,8 +23,8 @@ make
 # ID is a string with current time
 ID=$(date +"%Y%m%d_%H%M%S")
 ./main \
-	--steps 			10000 	 		\
-	--nobs 				50	 	 		\
+	--steps 			50000 	 		\
+	--nobs 				100	 	 		\
 	--csize 			5 		 		\
 	--likelihoodweight 	30	 			\
 	--searchdepth		2		 		\
