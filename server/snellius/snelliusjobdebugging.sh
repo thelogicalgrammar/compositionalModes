@@ -16,13 +16,9 @@ module load binutils/2.38-GCCcore-11.3.0
 # To run in parallel
 module load parallel/20220722-GCCcore-11.3.0
 
-# Compile script (assuming sbatch is run from the ./server/snellius directory)
 cd ../../
-make 
-
-# ID is a string with current time
-ID=$(date +"%Y%m%d_%H%M%S")
-./main \
+make debug
+gdb -batch -ex "run" -ex "thread apply all backtrace full" -ex "quit" --args ./main \
 	--steps 			10000 	 		\
 	--nobs 				50	 	 		\
 	--csize 			5 		 		\
@@ -30,5 +26,5 @@ ID=$(date +"%Y%m%d_%H%M%S")
 	--searchdepth		2		 		\
 	--fname 			"data/${ID}"	\
 	--ct				16
-
+	
 # ./main --steps 10000 --nobs 5 --csize 5 --likelihoodweight 30 --searchdepth 2 --fname "data/10" --ct 16
