@@ -20,7 +20,7 @@ cd ../../
 make debug
 gdb -batch -ex "run" -ex "thread apply all backtrace full" -ex "quit" --args ./main \
 	--steps 			10000 	 		\
-	--nobs 				50	 	 		\
+	--nobs 				1000	 	 	\
 	--csize 			5 		 		\
 	--likelihoodweight 	30	 			\
 	--searchdepth		2		 		\

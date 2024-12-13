@@ -24,7 +24,7 @@ make
 ID=$(date +"%Y%m%d_%H%M%S")
 ./main \
 	--steps 			100000 	 		\
-	--nobs 				300	 	 		\
+	--nobs 				1000	 	 		\
 	--csize 			5 		 		\
 	--likelihoodweight 	30	 			\
 	--searchdepth		2		 		\
