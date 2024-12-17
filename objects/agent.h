@@ -302,7 +302,9 @@ public:
 			std::string utt = datum.output;
 			// interpret the utterance, which gives the 
 			// P(i is a target|utterance) for each i in context
+			std::cout << "Interpreting..." << utt << std::endl;
 			std::vector<double> probs = this->interpret(utt, c);
+			std::cout << "...done" << std::endl;
 			// compute total surprisal of targetness of elements
 			// in the context with the P(target|utterance)
 			// NOTE: This is not weighted by the P(target|utt):

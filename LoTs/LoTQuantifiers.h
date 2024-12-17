@@ -530,16 +530,24 @@ public:
 		// Agent to calculate communicative accuracy with.
 		Agent<QuantsHypothesis> agent{};
 
+		std::cout << "Setting hypothesis..." << std::endl;
 		// set the hypothesis of the agent to the current hypothesis
 		agent.setHypothesis(*this);
+		std::cout << "...done" << std::endl;
 
+		std::cout << "Generating contexts..." << std::endl;
 		std::vector<t_context> cs = generateContexts(cSize, nObs, local_rng);
+		std::cout << "...done" << std::endl;
 
+		std::cout << "Producing data..." << std::endl;
 		// produce data for approximating communicative accuracy
 		commData = agent.produceDataFromEnumeration(cs, local_rng, searchDepth);
+		std::cout << "...done" << std::endl;
 
+		std::cout << "Computing communicative accuracy..." << std::endl;
 		// the new agent computes its communicative accuracy
 		double commAcc = agent.communicativeAccuracy(commData, local_rng);
+		std::cout << "...done" << std::endl;
 
 		// The likelihood is the weighted sum of the communicative accuracy
 		// and the simplicity of the language.
