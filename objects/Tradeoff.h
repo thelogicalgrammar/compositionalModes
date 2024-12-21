@@ -35,7 +35,6 @@ TopN<LangHyp> runTradeoffAnalysis(
 	){
 		// Add hypothesis to top
 		top << h;
-
 		std::cout << i << " : " << h.string() << std::endl;
 		i++;
 	}
