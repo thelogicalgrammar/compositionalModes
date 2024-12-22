@@ -290,33 +290,24 @@ public:
 		double cumCA = 0;
 		// the data_t is a vector of datum_t
 		// each datum is a tuple of (context, utterance string)
-		std::cout << "Interpreting data..." << std::endl;
 		for (auto datum : data) {
 
 			// Check if datum.input and datum.output are valid
 			if (datum.input.empty() || datum.output.empty()) {
-				std::cerr << "Invalid datum encountered." << std::endl;
 				continue;
 			}
 			// Get the context
-			std::cout << "Getting input..." << std::endl;
 			t_context c = datum.input;
-			std::cout << "...done" << std::endl;
 			// Get the second element of each tuple in context
 			// which says whether the element is a target.
-			std::cout << "Getting targets..." << std::endl;
 			std::vector<bool> targets;
 			for (auto elem : c) { targets.push_back(std::get<1>(elem)); }
-			std::cout << "...done" << std::endl;
 
 			// Get the utterance *as a string*
-			std::cout << "Getting output" << std::endl;
 			std::string utt = datum.output;
-			std::cout << "...done" << std::endl;
 
 			// interpret the utterance, which gives the 
 			// P(i is a target|utterance) for each i in context
-			std::cout << "Interpreting: " << utt << " ..." << std::endl;
 			std::vector<double> probs = this->interpret(utt, c);
 			if (probs.size() != targets.size()) {
 				std::cerr 
@@ -324,7 +315,6 @@ public:
 					<< std::endl;
 				continue;
 			}
-			std::cout << "...done" << std::endl;
 			// compute total surprisal of targetness of elements
 			// in the context with the P(target|utterance)
 			// NOTE: This is not weighted by the P(target|utt):
@@ -342,15 +332,10 @@ public:
 				}
 			}
 			cumCA += CA;
-
-			/* std::cout << datum << probs << "	: " << CA << std::endl; */
-
 		}
-		std::cout << "...done interpreting data" << std::endl;
 		// normalize by the number of observations
 		// to get the average surprisal of an observation
 		cumCA /= data.size();
-		std::cout << std::endl;
 		return cumCA;
 	}
 

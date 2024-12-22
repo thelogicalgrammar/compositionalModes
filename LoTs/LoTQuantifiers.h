@@ -659,14 +659,6 @@ public:
 							t_IV_w{y}
 						);
 						
-						// next line is causing segmentation fault
-						// when the hypothesis is called
-						/* std::cout << "here 0" << std::endl; */
-						/* std::cout << std::get<0>(tup) << std::endl; */
-						/* std::cout << std::get<1>(tup) << std::endl; */
-						/* std::cout << this << std::endl; */
-						/* std::cout << std::endl; */
-
 						// the relevant bit of the hypothesis
 						// takes a context and two IVs and returns
 						// a t_t
