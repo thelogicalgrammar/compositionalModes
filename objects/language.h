@@ -469,9 +469,7 @@ public:
     BTC(std::unique_ptr<BTC> left, std::unique_ptr<BTC> right)
         : data(Children(std::move(left), std::move(right))) {}
 
-	// Compose method
-	// which evaluates the BTC
-	// into a t_meaning object
+	// Compose method which evaluates the BTC into a t_meaning object
     t_meaning compose(t_BTC_compose composition_fn) const {
         if (std::holds_alternative<t_meaning>(data)) {
             // If it's a terminal, just return it as is
@@ -528,6 +526,7 @@ public:
 			int depth = 0, 
 			int maxDepth = 3
 		) {
+
 		std::uniform_int_distribution<> dist(0, names.size() - 1);
 		// Decide between leaf or internal node
 		std::uniform_int_distribution<> decide(0, 1); 

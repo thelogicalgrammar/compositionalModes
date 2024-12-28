@@ -31,16 +31,19 @@ TopN<LangHyp> runTradeoffAnalysis(
 
 	int i = 0;
 	for(auto& h : samp.run(
-		Control(FleetArgs::steps)) | top | printer(FleetArgs::print)
-	){
-		// Add hypothesis to top
-		top << h;
-		std::cout << i << std::endl;
-		i++;
-	}
+		Control(FleetArgs::steps)) | top | printer(FleetArgs::print)){
+	/* for(auto& h : */ 
+	/* 		samp.unthreaded_run(Control(FleetArgs::steps)) */ 
+	/* 		| top */ 
+	/* 		| printer(FleetArgs::print)){ */
+
+			// Add hypothesis to top
+			top << h;
+			std::cout << i << std::endl;
+			i++;
+		}
 
 	std::cout << "Top hypotheses" << std::endl;
-
 	top.print();
 	return top;
 }

@@ -536,7 +536,9 @@ public:
 		std::vector<t_context> cs = generateContexts(cSize, nObs, local_rng);
 
 		// produce data for approximating communicative accuracy
-		commData = agent.produceDataFromEnumeration(cs, local_rng, searchDepth);
+		/* commData = agent.produceDataFromEnumeration( */
+		/* 		cs, local_rng, searchDepth); */
+		commData = agent.produceData(cs, local_rng, searchDepth);
 
 		// the new agent computes its communicative accuracy
 		double commAcc = agent.communicativeAccuracy(commData, local_rng);

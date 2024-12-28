@@ -6,14 +6,6 @@ using t_BTC_dist = std::tuple<
 	std::discrete_distribution<>
 >;
 
-// an enum to represent whether the agent
-// searches for an utterance by sampling
-// or by enumeration
-enum class SearchType {
-	SAMPLE,
-	ENUMERATE
-};
-
 // Context variations are contexts
 // that differ from the observed context
 // only in what is a target and what a distractor.
@@ -265,7 +257,7 @@ public:
 		sizeScaling = 0.0;
 		// initialize the number of sampled random utterances
 		// to pick one to refer to the state
-		// Onliy used in the case of sampling
+		// *Onliy used in the case of sampling*
 		nSamples = 5000;
 	}
 
@@ -309,6 +301,10 @@ public:
 			// interpret the utterance, which gives the 
 			// P(i is a target|utterance) for each i in context
 			std::vector<double> probs = this->interpret(utt, c);
+			// check that probs is not empty
+			/* if (probs != NULL) */ 
+			// if different from null, check that probs and targets
+			// have the same size
 			if (probs.size() != targets.size()) {
 				std::cerr 
 					<< "Size mismatch between probs and targets." 
@@ -965,7 +961,7 @@ public:
 				t_BTC_vec& possibleUtts
 			) const {
 
-		t_BTC_vec sentences;
+		t_BTC_vec sentences = {};
 
 		// find the sentences that are true of the context
 		for (auto& utt : possibleUtts) {

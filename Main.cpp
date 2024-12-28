@@ -50,7 +50,8 @@
 enum class SimulationType {
 	TESTGRAMMAR,
 	TESTCOMMUNICATION,
-	TRADEOFF
+	TRADEOFF,
+	VECTOR
 };
 
 int main(int argc, char** argv) {
@@ -106,6 +107,7 @@ int main(int argc, char** argv) {
 	/* SimulationType simulationType = SimulationType::TESTCOMMUNICATION; */
 	/* SimulationType simulationType = SimulationType::TESTGRAMMAR; */
 	SimulationType simulationType = SimulationType::TRADEOFF;
+	/* SimulationType simulationType = SimulationType::VECTOR; */
 
 	switch (simulationType) {
 
@@ -215,6 +217,19 @@ int main(int argc, char** argv) {
 				"./data/commAccLow.txt"
 			);
 
+			break;
+		}
+
+		case SimulationType::VECTOR: {
+
+			t_BTC_vec sentences;
+			LexicalSemantics lex = LexicalSemantics();
+			std::unique_ptr<BTC> sentence = BTC::fromSExpression(
+				/* "( ( X.Q X.R ) ( intersection X.R X.L ) )", */
+				"( everything distractor )",
+				lex
+			);
+			sentences.push_back(std::move(sentence));
 			break;
 		}
 

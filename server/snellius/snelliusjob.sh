@@ -12,10 +12,6 @@ module load binutils/2.38-GCCcore-11.3.0
 # To run in parallel
 module load parallel/20220722-GCCcore-11.3.0
 
-# segfault happens when the stack size is too small
-# so I set it to unlimited
-ulimit -s unlimited
-
 # Compile script (assuming sbatch is run from the ./server/snellius directory)
 cd ../../
 make 
