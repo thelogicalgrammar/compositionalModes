@@ -488,7 +488,7 @@ public:
 		t_terminalsMap terminalsMap = this->generateTerminalsMap(lex);
 		t_BTC_compose compositionFn = trueHyp.getCompositionF();
 
-		// Find all sentences
+		// Find all sentences given the grammar
 		t_BTC_vec allSentences = enumerateSentences(
 				compositionFn,
 				lex,
@@ -499,28 +499,13 @@ public:
 		// loop over contexts
 		for (auto& context : cs) {
 
-			// copy the sentences
-			auto copy = copyBTCVec(allSentences);
-
 			// select the true sentences in context
-			// NOTE: this moves the sentences
 			t_BTC_vec sentences = selectTrueSentences(
 					context,
 					compositionFn,
-					copy
+					copyBTCVec(allSentences)
 				);
-
-			/* // print out the trees */
-			/* int i = 0; */
-			/* for (auto& tree : sentences) { */
-			/* 	tree -> printTree(lex); */
-			/* 	std::cout << std::endl; */
-			/* 	i++; */
-			/* 	if (i > 10) { break; } */
-			/* } */
-			/* std::cout << "Number of trees: " << */ 
-			/* 	sentences.size() << std::endl; */
-
+			
 			// Define a distribution over sentences
 			// NOTE: this moves the sentences
 			std::optional<t_BTC_dist> sentencesDist = produce(
@@ -956,9 +941,9 @@ public:
 	}
 
 	t_BTC_vec selectTrueSentences(
-				t_context c,
-				t_BTC_compose compositionFn,
-				t_BTC_vec& possibleUtts
+				const t_context& c,
+				const t_BTC_compose& compositionFn,
+				t_BTC_vec possibleUtts
 			) const {
 
 		t_BTC_vec sentences = {};

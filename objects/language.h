@@ -699,8 +699,13 @@ std::vector<std::unique_ptr<BTC>> copyBTCVec(
 	) {
 	std::vector<std::unique_ptr<BTC>> out;
 	for (auto& btc : vec) {
-		std::unique_ptr<BTC> btcCopy = btc->copy();
-		out.push_back(std::move(btcCopy));
+		// Check for null pointers
+		if (btc) {
+            out.push_back(std::unique_ptr<BTC>(btc->copy()));
+        } else {
+			// raise an error if a null pointer is found
+			throw std::runtime_error("Null pointer in vector");
+		}
 	}
 	return out;
 }
