@@ -46,12 +46,18 @@
 #include "objects/Tradeoff.h"
 #include "objects/CommAcc.h"
 
+// FOR DEBUGGING
+#define BACKWARD_HAS_BFD 1
+#include "backward.hpp"
+backward::SignalHandling sh;
+// END FOR DEBUGGING
+
 // Names for the possible simulations that we can run in main
 enum class SimulationType {
 	TESTGRAMMAR,
 	TESTCOMMUNICATION,
 	TRADEOFF,
-	VECTOR
+	DEBUG
 };
 
 int main(int argc, char** argv) {
@@ -107,7 +113,7 @@ int main(int argc, char** argv) {
 	/* SimulationType simulationType = SimulationType::TESTCOMMUNICATION; */
 	/* SimulationType simulationType = SimulationType::TESTGRAMMAR; */
 	SimulationType simulationType = SimulationType::TRADEOFF;
-	/* SimulationType simulationType = SimulationType::VECTOR; */
+	/* SimulationType simulationType = SimulationType::DEBUG; */
 
 	switch (simulationType) {
 
@@ -220,16 +226,19 @@ int main(int argc, char** argv) {
 			break;
 		}
 
-		case SimulationType::VECTOR: {
+		case SimulationType::DEBUG: {
 
-			t_BTC_vec sentences;
-			LexicalSemantics lex = LexicalSemantics();
-			std::unique_ptr<BTC> sentence = BTC::fromSExpression(
-				/* "( ( X.Q X.R ) ( intersection X.R X.L ) )", */
-				"( everything distractor )",
-				lex
-			);
-			sentences.push_back(std::move(sentence));
+			/* t_BTC_vec sentences; */
+			/* LexicalSemantics lex = LexicalSemantics(); */
+			/* std::unique_ptr<BTC> sentence = BTC::fromSExpression( */
+			/* 	/1* "( ( X.Q X.R ) ( intersection X.R X.L ) )", *1/ */
+			/* 	"( everything distractor )", */
+			/* 	lex */
+			/* ); */
+			/* sentences.push_back(std::move(sentence)); */
+			int *ptr = NULL; 
+			printf("%d\n", *ptr); // Dereferencing null pointer 
+			return 0;
 			break;
 		}
 

@@ -3,10 +3,6 @@
 #SBATCH -p rome
 #SBATCH -t 100:00:00
 
-# segfault happens when the stack size is too small
-# so I set it to unlimited
-ulimit -s unlimited
-
 # Run this code in a file with source setup.sh
 module load 2022
 # Turns out that g++-11 works for compiling the models
@@ -15,10 +11,13 @@ module load Eigen/3.4.0-GCCcore-11.3.0
 module load binutils/2.38-GCCcore-11.3.0
 # To run in parallel
 module load parallel/20220722-GCCcore-11.3.0
+# for debugging
+module load binutils/2.38-GCCcore-11.3.0
 
 cd ../../
 make debug
-gdb -batch -ex "run" -ex "thread apply all backtrace full" -ex "quit" --args ./main \
+# gdb -batch -ex "run" -ex "thread apply all backtrace full" -ex "quit" --args ./main \
+./main \
 	--steps 			10000 	 		\
 	--nobs 				1000	 	 	\
 	--csize 			5 		 		\
