@@ -486,7 +486,7 @@ private:
 	// to estimate communicative accuracy
 	static inline size_t searchDepth = 2;
 	// For storing
-	static inline data_t commData;
+	data_t commData;
 
 public:
 	using Super = DeterministicLOTHypothesis<

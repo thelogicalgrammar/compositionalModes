@@ -526,7 +526,9 @@ public:
 
 			if (maybestring.has_value()) {
 				data.push_back(typename Hyp::datum_t{
-					context, *maybestring, 1.0
+					context, 
+					*maybestring, 
+					1.0
 				});
 			} else {
 				throw std::runtime_error("No data produced");
