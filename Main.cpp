@@ -47,9 +47,9 @@
 #include "objects/CommAcc.h"
 
 // FOR DEBUGGING
-#define BACKWARD_HAS_BFD 1
-#include "backward.hpp"
-backward::SignalHandling sh;
+/* #define BACKWARD_HAS_BFD 1 */
+/* #include "backward.hpp" */
+/* backward::SignalHandling sh; */
 // END FOR DEBUGGING
 
 // Names for the possible simulations that we can run in main

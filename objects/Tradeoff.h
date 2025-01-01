@@ -15,7 +15,7 @@ TopN<LangHyp> runTradeoffAnalysis(
 	LangHyp::setParams(nObs, cSize, likelihoodWeight, rng, searchDepth);
 
 	// TopN object to store the best hypotheses
-	TopN<LangHyp> top(size_t{100000});
+	TopN<LangHyp> top(size_t{FleetArgs::steps});
 
 	auto h0 = LangHyp::sample();
 
@@ -39,7 +39,7 @@ TopN<LangHyp> runTradeoffAnalysis(
 
 			// Add hypothesis to top
 			top << h;
-			std::cout << i << std::endl;
+			std::cout << i << " " << std::flush;
 			i++;
 		}
 

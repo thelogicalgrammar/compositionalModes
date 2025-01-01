@@ -8,12 +8,14 @@ all:
 local:
 	g++-10 -I../ -I../../ Main.cpp -o main -O2 $(FLEET_FLAGS) $(FLEET_INCLUDE) -I  /usr/include/eigen3/ $(FLEET_LIBS)
 debuglocal:
-	g++-10  -I../ -I../../ Main.cpp -o main -g -O2 $(FLEET_FLAGS) $(FLEET_INCLUDE) -I /usr/include/eigen3/ $(FLEET_LIBS) -lbfd -ldl
+	g++-10 -Wall -Wextra -pedantic -I../ Main.cpp -o main -g $(FLEET_FLAGS) $(FLEET_INCLUDE) -I /usr/include/eigen3/ $(FLEET_LIBS) $(SANITARY_FLAGS) 
+	# g++-10  -I../ -I../../ Main.cpp -o main -g -O2 $(FLEET_FLAGS) $(FLEET_INCLUDE) -I /usr/include/eigen3/ $(FLEET_LIBS) -lbfd -ldl
 static:
 	g++ -I../../ Main.cpp -o main -O3 -static -Wl,--whole-archive -lpthread -Wl,--no-whole-archive $(FLEET_FLAGS) $(FLEET_INCLUDE) -I  /usr/include/eigen3/ $(FLEET_LIBS)
 debug:
-	# g++ -Wall -Wextra -pedantic -I../ Main.cpp -o main -g $(FLEET_FLAGS) $(FLEET_INCLUDE) -I /usr/include/eigen3/ $(FLEET_LIBS) $(SANITARY_FLAGS) 
-	g++ -I../ Main.cpp -o main -g -O2 $(FLEET_FLAGS) $(FLEET_INCLUDE) -I /usr/include/eigen3/ $(FLEET_LIBS) -lbfd -ldl
+	g++ -Wall -Wextra -pedantic -I../ Main.cpp -o main -g $(FLEET_FLAGS) $(FLEET_INCLUDE) -I /usr/include/eigen3/ $(FLEET_LIBS) $(SANITARY_FLAGS) 
+	# When using backward.hpp to find source of segfaults, use this and uncomment DEBUG lines in main
+	# g++ -I../ Main.cpp -o main -g -O2 $(FLEET_FLAGS) $(FLEET_INCLUDE) -I /usr/include/eigen3/ $(FLEET_LIBS) -lbfd -ldl
 clang:
 	clang++ -I../../ Main.cpp -o main -O2 $(CLANG_FLAGS) $(FLEET_INCLUDE) $(FLEET_LIBS)
 profiled:
