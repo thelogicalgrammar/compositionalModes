@@ -17,6 +17,7 @@ module load binutils/2.38-GCCcore-11.3.0
 cd ../../
 make debug
 # gdb -batch -ex "run" -ex "thread apply all backtrace full" -ex "quit" --args ./main \
+ID=$(date +"%Y%m%d_%H%M%S")
 ./main \
 	--steps 			200000 	 		\
 	--nobs 				200	 	 		\
