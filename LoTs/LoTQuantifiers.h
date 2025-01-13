@@ -517,7 +517,7 @@ public:
 		grammar.GRAMMAR_MAX_DEPTH = 50;
 	}
 
-	data_t getCommData() {
+	data_t getCommData() const {
 		return commData;
 	}
 

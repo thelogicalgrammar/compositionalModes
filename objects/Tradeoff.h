@@ -9,7 +9,8 @@ TopN<LangHyp> runTradeoffAnalysis(
 		double likelihoodWeight,
 		std::mt19937& rng,
 		size_t searchDepth,
-		std::string& fname
+		std::filesystem::path& datafilepath,
+		std::filesystem::path& hypfilepath
 	){
 
 	LangHyp::setParams(nObs, cSize, likelihoodWeight, rng, searchDepth);
@@ -36,14 +37,18 @@ TopN<LangHyp> runTradeoffAnalysis(
 	/* 		samp.unthreaded_run(Control(FleetArgs::steps)) */ 
 	/* 		| top */ 
 	/* 		| printer(FleetArgs::print)){ */
-
-			// Add hypothesis to top
-			top << h;
+			
+			addLineToHypCSV(hypfilepath, h);
+			addLineToDataFile(datafilepath, h);
 			std::cout << i << " " << std::flush;
 			i++;
+
+			// Add hypothesis to top
+			/* top << h; */
 		}
 
 	std::cout << "Top hypotheses" << std::endl;
 	top.print();
 	return top;
 }
+

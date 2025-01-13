@@ -113,6 +113,64 @@ void to_json(nlohmann::json& j, const TDatum& d) {
     };
 }
 
+void initializeHypCSV(const std::filesystem::path& filename) {
+	// Initialize a CSV file
+	std::ofstream file(filename);
+	file 
+		<< "posterior,prior,likelihood,hypothesis,serialized" 
+		<< std::endl;
+	file.close();
+}
+
+template <typename Hyp>
+void addLineToHypCSV(const std::filesystem::path& filename, const Hyp& h) {
+	// Add a line to a CSV file
+	std::ofstream file(filename, std::ios_base::app);
+
+	// Add the hypothesis to the file
+	file 
+		<< h.posterior 
+		<< "," << h.prior 
+		<< "," << h.likelihood 
+		<< "," << h.string() 
+		<< "," 
+		<< h.serialize() 
+		<< std::endl;
+	file.close();
+}
+
+template <typename Hyp>
+void addLineToDataFile(const std::filesystem::path& filename, const Hyp& h) {
+
+	// Add a line to a CSV file
+	std::ofstream file(filename, std::ios_base::app);
+
+	auto data = h.getCommData();
+	for (auto& d : data) {
+		// input is a list of (int, bool) pairs
+		std::string input = "{ ";
+		for (auto& [i, b] : d.input) {
+			input 
+				+= "(" 
+				+ std::to_string(i) 
+				+ ", " 
+				+ std::to_string(b) 
+				+ "), ";
+		}
+		input += " }";
+
+		file 
+			<< input
+			<< "," 
+			<< d.output 
+			<< "|";
+	}
+	// Conclude with a newline
+	// for the next hypothesis
+	file << std::endl;
+	file.close();
+}
+
 template <typename Hyp>
 void saveResults(const std::filesystem::path& filename, 
 				 const TopN<Hyp>& results) {
@@ -135,7 +193,6 @@ void saveResults(const std::filesystem::path& filename,
 		jH["data"] = json::array();
 		auto data = h.getCommData();
 		for (auto& d : data) {
-			h.getCommData();
 			jH["data"].push_back(d);
 		}
 		j["topN"].push_back(jH);

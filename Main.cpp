@@ -243,22 +243,7 @@ int main(int argc, char** argv) {
 		}
 
 		case SimulationType::TRADEOFF: {
-
-			TopN<QuantsHypothesis> results = runTradeoffAnalysis<QuantsHypothesis>(
-				// number of samples to estimate communicative accuracy
-				nObs,
-				// size of contexts
-				cSize,
-				// likelihoodWeight
-				likelihoodWeight,
-				// seed
-				rng,
-				// search depth
-				searchDepth,
-				// add this to the folder name 
-				fname
-			);
-
+			
 			// Determine folder name and create
 			auto dir = std::filesystem::path(fname);
 
@@ -273,7 +258,11 @@ int main(int argc, char** argv) {
 			}
 
 			// save parameters to json file
-			std::filesystem::path jpath = dir / "parameters.json";
+			std::filesystem::path jpath = dir / (
+				"data_likweight_" + std::to_string(likelihoodWeight) 
+				+ "_nobs_" + std::to_string(nObs) 
+				+ "parameters.json"
+			);
 			std::ofstream jfile(jpath);
 			nlohmann::json j;
 			j["nobs"] = nObs;
@@ -282,15 +271,36 @@ int main(int argc, char** argv) {
 			j["searchdepth"] = searchDepth;
 			jfile << j.dump() << std::endl;
 
-			// save results to file with likelihood weight and nObs
-			std::filesystem::path filepath = 
-				dir / (
-					"likweight_" + std::to_string(likelihoodWeight) 
-					+ "_nobs_" + std::to_string(nObs) 
-					+ ".json"
+			std::filesystem::path datafilepath = dir / "data.txt";
+			std::filesystem::path hypfilepath = dir / "hyp.csv";
+
+			initializeHypCSV(hypfilepath);
+
+			TopN<QuantsHypothesis> results = 
+				runTradeoffAnalysis<QuantsHypothesis>(
+					// number of samples to estimate communicative accuracy
+					nObs,
+					// size of contexts
+					cSize,
+					// likelihoodWeight
+					likelihoodWeight,
+					// seed
+					rng,
+					// search depth
+					searchDepth,
+					datafilepath,
+					hypfilepath
 				);
 
-			saveResults<QuantsHypothesis>(filepath, results);
+			// save results to file with various params
+			/* std::filesystem::path filepath = */ 
+			/* 	dir / ( */
+			/* 		"likweight_" + std::to_string(likelihoodWeight) */ 
+			/* 		+ "_nobs_" + std::to_string(nObs) */ 
+			/* 		+ ".json" */
+			/* 	); */
+
+			/* saveResults<QuantsHypothesis>(filepath, results); */
 
 			break;
 		}
