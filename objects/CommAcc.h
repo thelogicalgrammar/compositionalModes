@@ -22,7 +22,7 @@ void estimateCommAcc(
 		size_t searchDepth = 2
 	){
 
-	Agent<Hyp> agent(&grammar, stringRepr);
+	Agent<Hyp> agent(stringRepr);
 
 	Hyp::setParams(nObs, cSize, likelihoodWeight, rng, searchDepth);
 

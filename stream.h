@@ -145,6 +145,10 @@ void addLineToDataFile(const std::filesystem::path& filename, const Hyp& h) {
 	// Add a line to a CSV file
 	std::ofstream file(filename, std::ios_base::app);
 
+	file 
+		<< h.string()
+		<< "||";
+
 	auto data = h.getCommData();
 	for (auto& d : data) {
 		// input is a list of (int, bool) pairs
@@ -161,7 +165,7 @@ void addLineToDataFile(const std::filesystem::path& filename, const Hyp& h) {
 
 		file 
 			<< input
-			<< "," 
+			<< ";" 
 			<< d.output 
 			<< "|";
 	}
@@ -171,35 +175,3 @@ void addLineToDataFile(const std::filesystem::path& filename, const Hyp& h) {
 	file.close();
 }
 
-template <typename Hyp>
-void saveResults(const std::filesystem::path& filename, 
-				 const TopN<Hyp>& results) {
-	// Save the results to a file
-	std::ofstream file(filename);
-
-	json j;
-
-	std::string topNSerialized = results.serialize();
-	j["topNSerialized"] = topNSerialized;
-
-	j["topN"] = json::array();
-	for (auto& h : results.sorted()) {
-		json jH;
-		jH["posterior"] = h.posterior;
-		jH["prior"] = h.prior;
-		jH["likelihood"] = h.likelihood;
-		jH["hypothesisSerialized"] = h.serialize();
-		jH["hypothesis"] = h.string();
-		jH["data"] = json::array();
-		auto data = h.getCommData();
-		for (auto& d : data) {
-			jH["data"].push_back(d);
-		}
-		j["topN"].push_back(jH);
-	}
-
-	// the 4 is the indentation
-	file << j.dump(4) << std::endl;
-	file.close();
-
-}

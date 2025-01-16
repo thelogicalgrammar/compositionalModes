@@ -236,9 +236,22 @@ int main(int argc, char** argv) {
 			/* 	lex */
 			/* ); */
 			/* sentences.push_back(std::move(sentence)); */
-			int *ptr = NULL; 
-			printf("%d\n", *ptr); // Dereferencing null pointer 
-			return 0;
+
+
+			Agent<QuantsHypothesis> agent = Agent<QuantsHypothesis>(
+				"1:%s | %s | %s | %s;3:( %s %s );7:( %s %s );6:%s.Q;0:X;4:%s.L;0:X;4:%s.R;0:X;8:( intEq %s %s );10:( cardinality %s %s );9:%s.R;0:X;2:%s.c;0:X;10:( cardinality %s %s );9:%s.R;0:X;2:%s.c;0:X;8:( intGt %s %s );10:( cardinality %s %s );9:%s.L;0:X;2:%s.c;0:X;10:1;8:( intEq %s %s );10:( cardinality %s %s );9:%s.R;0:X;2:%s.c;0:X;10:( cardinality %s %s );9:( setminus %s %s );9:%s.L;0:X;9:%s.R;0:X;2:%s.c;0:X"
+			);
+
+			auto data = agent.produceDataFromEnumeration(
+				generateContexts(cSize, nObs, rng),
+				rng
+			);
+
+			std::cout << "Data size: " << data.size() << std::endl;
+			for (const auto& datum : data) {
+				std::cout << datum << std::endl;
+			}
+
 			break;
 		}
 
@@ -269,6 +282,7 @@ int main(int argc, char** argv) {
 			j["csize"] = cSize;
 			j["likelihoodweight"] = likelihoodWeight;
 			j["searchdepth"] = searchDepth;
+			j["steps"] = FleetArgs::steps;
 			jfile << j.dump() << std::endl;
 
 			std::filesystem::path datafilepath = dir / "data.txt";

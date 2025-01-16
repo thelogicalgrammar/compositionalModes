@@ -43,12 +43,11 @@ TopN<LangHyp> runTradeoffAnalysis(
 			std::cout << i << " " << std::flush;
 			i++;
 
-			// Add hypothesis to top
-			/* top << h; */
+			// Hypotheses are added to top with the pipe operator above
 		}
 
 	std::cout << "Top hypotheses" << std::endl;
 	top.print();
-	return top;
+	/* return top; */
 }
 

@@ -261,10 +261,11 @@ public:
 		nSamples = 5000;
 	}
 
-	Agent( typename Hyp::Grammar_t* grammar, std::string parseable ) : Agent(){
-		std::cout << "Creating agent: " << parseable << std::endl;
-		this->setHypothesis(Hyp(parseable));
+	Agent(Hyp hyp) : Agent() {
+		this->setHypothesis(hyp);
 	}
+
+	Agent( std::string parseable ) : Agent(Hyp(parseable)) {}
 
 	double communicativeAccuracy(
 			Hyp::data_t data,
@@ -489,6 +490,7 @@ public:
 		t_BTC_compose compositionFn = trueHyp.getCompositionF();
 
 		// Find all sentences given the grammar
+		// up to a certain depth
 		t_BTC_vec allSentences = enumerateSentences(
 				compositionFn,
 				lex,
@@ -507,9 +509,9 @@ public:
 				);
 			
 			// Define a distribution over sentences
-			// NOTE: this moves the sentences
+			// NOTE: this moves 'sentences' so it is no longer usable
 			std::optional<t_BTC_dist> sentencesDist = produce(
-					context, 
+					context,
 					compositionFn,
 					lex,
 					terminalsMap,

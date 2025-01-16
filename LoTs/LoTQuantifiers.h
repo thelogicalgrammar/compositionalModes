@@ -241,7 +241,6 @@ namespace Quants_DSL{
 	// Apply one meaning to another
 	auto applyIVtoQ =
 		+[](t_Q m1, t_IV m2) -> t_DP {
-			// returns a t_DP
 			return m1(m2);
 		};
 
@@ -372,13 +371,13 @@ public:
 		// that interprets nodes [Q IV]
 
 		// -> DP
-		add("( %s %s )"				, applyIVtoQ				, 0.1);
+		add("( %s %s )"				, applyIVtoQ				, 1);
 
 		// -> IV
-		add("( union %s %s )"		, union_<t_IV>				, 0.1);
-		add("( intersection %s %s )", intersection<t_IV>		, 0.1);
-		add("( setminus %s %s )"	, setminus<t_IV>			, 0.1);
-		add("( nTh %s %s %s )"		, nTh<t_IV,t_int>			, 0.1);
+		add("( union %s %s )"		, union_<t_IV>				, 1);
+		add("( intersection %s %s )", intersection<t_IV>		, 1);
+		add("( setminus %s %s )"	, setminus<t_IV>			, 1);
+		add("( nTh %s %s %s )"		, nTh<t_IV,t_int>			, 1);
 
 		// -> bool
 		add("( %s %s )"				, applyIVtoDP				, 1);
@@ -391,11 +390,11 @@ public:
 		add("( or %s %s )"			, or_<t_t>					, 0.1);
 
 		// -> int
-		add("( cardinality %s %s )"	, cardinality<t_IV,t_int>	, 0.5);
-		add_terminal("0"			, 0							, 0.5);
-		add_terminal("1"			, 1							, 0.5);
-		add("( + %s %s )"			, plus<t_int>				, 0.1);
-		add("( - %s %s )"			, minus<t_int>				, 0.1);
+		add("( cardinality %s %s )"	, cardinality<t_IV,t_int>	, 1);
+		add_terminal("0"			, 0							, 1);
+		add_terminal("1"			, 1							, 1);
+		add("( + %s %s )"			, plus<t_int>				, 0.2);
+		add("( - %s %s )"			, minus<t_int>				, 0.2);
 
 		// The wrappers to define the quantifiers
 		// so that the first two arguments of the input do not
@@ -406,31 +405,31 @@ public:
 		/* add("( %s %s )"			, applyIVtoQ_w				, 0.1); */
 
 		// -> IV
-		add("( union %s %s )"		, union_<t_IV_w>				, 0.1);
-		add("( intersection %s %s )", intersection<t_IV_w>			, 0.1);
-		add("( setminus %s %s )"	, setminus<t_IV_w>				, 0.1);
-		add("( nTh %s %s %s )"		, nTh<t_IV_w,t_int_w>			, 0.1);
+		add("( union %s %s )"		, union_<t_IV_w>				, 1);
+		add("( intersection %s %s )", intersection<t_IV_w>			, 1);
+		add("( setminus %s %s )"	, setminus<t_IV_w>				, 1);
+		add("( nTh %s %s %s )"		, nTh<t_IV_w,t_int_w>			, 1);
 		
 		// -> bool
 		/* add("( %s %s )"			, applyIVtoDP_w					, 1); */
-		add("( intEq %s %s )" 		, intEq<t_int_w,t_t_w>			, 0.5);
-		add("( intGt %s %s )"		, intGt<t_int_w,t_t_w>			, 0.5);
+		add("( intEq %s %s )" 		, intEq<t_int_w,t_t_w>			, 1);
+		add("( intGt %s %s )"		, intGt<t_int_w,t_t_w>			, 1);
 		// Don't need this for defining quantifiers
 		/* add_terminal("true"		, t_t_w{true}				, 0.1); */
 		/* add_terminal("false"		, t_t_w{false}				, 0.1); */
-		add("( not %s )"			, not_<t_t_w>					, 0.1);
-		add("( and %s %s )"			, and_<t_t_w>					, 0.1);
-		add("( or %s %s )"			, or_<t_t_w>					, 0.1);
+		add("( not %s )"			, not_<t_t_w>					, 1);
+		add("( and %s %s )"			, and_<t_t_w>					, 1);
+		add("( or %s %s )"			, or_<t_t_w>					, 1);
 
 		// -> int
-		add("( cardinality %s %s )"	, cardinality<t_IV_w,t_int_w>	, 0.5);
-		add_terminal("0"			, t_int_w(0)					, 0.1);
-		add_terminal("1"			, t_int_w(1)					, 0.1);
-		add("( + %s %s )"			, plus<t_int_w>					, 0.1);
-		add("( - %s %s )"			, minus<t_int_w>				, 0.1);
+		add("( cardinality %s %s )"	, cardinality<t_IV_w,t_int_w>	, 1);
+		add_terminal("0"			, t_int_w(0)					, 1);
+		add_terminal("1"			, t_int_w(1)					, 1);
+		add("( + %s %s )"			, plus<t_int_w>					, 0.2);
+		add("( - %s %s )"			, minus<t_int_w>				, 0.2);
 
 		// The inputs
-		add("X"						, Builtins::X<QuantsGrammar>, 5);
+		add("X"						, Builtins::X<QuantsGrammar>, 1);
 		add("%s.Q"					, q_						, 1);
 		add("%s.c"					, c_						, 1);
 		add("%s.L"					, l_Q						, 1);
@@ -527,17 +526,17 @@ public:
 		// since the likelihood only depends on communicative accuracy
 		// which I calculate inside this function.
 		
-		// Agent to calculate communicative accuracy with.
-		Agent<QuantsHypothesis> agent{};
-
-		// set the hypothesis of the agent to the current hypothesis
-		agent.setHypothesis(*this);
+		// Agent to calculate communicative accuracy with
+		// initialized with current hypothesis
+		Agent<QuantsHypothesis> agent{*this};
 
 		std::vector<t_context> cs = generateContexts(cSize, nObs, local_rng);
 
 		// produce data for approximating communicative accuracy
+		// NOTE: the data is assigned to the class variable commData
+		// so that it can be accessed in the sampling loop for storage
 		commData = agent.produceDataFromEnumeration(
-				cs, local_rng, searchDepth);
+			cs, local_rng, searchDepth);
 		/* commData = agent.produceData(cs, local_rng, searchDepth); */
 
 		// the new agent computes its communicative accuracy
@@ -663,9 +662,13 @@ public:
 						
 						// the relevant bit of the hypothesis
 						// takes a context and two IVs and returns
-						// a t_t
+						// a t_t.
 			 			auto o = this->call(tup);
-						// get the unwrapped t_Q_M value
+						// Unfortunately I have to evaluate
+						// all three quantifiers and
+						// get the unwrapped t_Q_M value.
+						// The '.i' is getting the value from the
+						// WrapperF<t_t> returned by the hypothesis.
 						return std::get<i>(o).i;
 					} catch (std::bad_function_call& e) {
 						std::cout << "here 2" << std::endl;

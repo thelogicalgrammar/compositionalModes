@@ -185,7 +185,7 @@ public:
 		add( "distractor",
 			[](t_context c) -> t_IV {
 				return [](t_e x) -> t_t {
-					// check that the object is a target
+					// check that the object is a distractor
 					return !std::get<1>(x);
 				};
 			}
