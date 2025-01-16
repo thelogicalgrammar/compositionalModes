@@ -22,7 +22,7 @@ ID=$(date +"%Y%m%d_%H%M%S")
 	--steps 			100000 	 		\
 	--nobs 				250	 	 		\
 	--csize 			5 		 		\
-	--likelihoodweight 	50	 			\
+	--likelihoodweight 	40	 			\
 	--searchdepth		2		 		\
 	--fname 			"data/${ID}"	\
 	--ct				16
