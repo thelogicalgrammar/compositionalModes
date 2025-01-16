@@ -19,10 +19,10 @@ make
 # ID is a string with current time
 ID=$(date +"%Y%m%d_%H%M%S")
 ./main \
-	--steps 			300 	 		\
+	--steps 			100000 	 		\
 	--nobs 				250	 	 		\
 	--csize 			5 		 		\
-	--likelihoodweight 	40	 			\
+	--likelihoodweight 	50	 			\
 	--searchdepth		2		 		\
 	--fname 			"data/${ID}"	\
 	--ct				16
