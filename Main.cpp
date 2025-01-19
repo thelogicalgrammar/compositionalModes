@@ -290,8 +290,8 @@ int main(int argc, char** argv) {
 
 			initializeHypCSV(hypfilepath);
 
-			TopN<QuantsHypothesis> results = 
-				runTradeoffAnalysis<QuantsHypothesis>(
+			/* TopN<QuantsHypothesis> results = */ 
+			runTradeoffAnalysis<QuantsHypothesis>(
 					// number of samples to estimate communicative accuracy
 					nObs,
 					// size of contexts

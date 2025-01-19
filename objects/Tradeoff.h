@@ -3,7 +3,7 @@
 
 // This returns a TopN object with the best N hypotheses
 template <typename LangHyp>
-TopN<LangHyp> runTradeoffAnalysis(
+void runTradeoffAnalysis(
 		size_t nObs,
 		size_t cSize,
 		double likelihoodWeight,

@@ -59,9 +59,11 @@ struct WrapperF {
 		return i(x);
 	}
 };
+// basic types
 using t_e_w   = WrapperC<t_e>;
 using t_t_w   = WrapperC<t_t>;
 using t_int_w = WrapperC<t_int>;
+// function types
 using t_UC_w  = WrapperF<t_UC,t_t>;
 using t_BC_w  = WrapperF<t_BC,t_UC>;
 using t_TC_w  = WrapperF<t_TC,t_BC>;
@@ -154,6 +156,22 @@ namespace Quants_DSL{
 		+[](tIV m1, tIV m2) -> tIV {
 			return tIV([m1,m2](t_e e) -> t_t {
 				return m1(e) && !m2(e);
+			});
+		};
+
+	// Convert an object of type t_context into
+	// a predicate.
+	template < typename tIV >
+	auto universe =
+		+[](t_context c) -> tIV {
+			// check that object is in the context
+			return tIV([c](t_e e) -> t_t {
+				for (const auto& x : c) {
+					if (x == e) {
+						return true;
+					}
+				}
+				return false;
 			});
 		};
 
@@ -266,6 +284,8 @@ namespace Quants_DSL{
 			return std::get<0>(i);
 		};
 
+	// They only appear in the first element
+	// of the hypothesis
 	auto l_Q =
 		+[](t_grammar_input i) -> t_IV  {
 			return std::get<1>(i);
@@ -276,11 +296,14 @@ namespace Quants_DSL{
 			return std::get<2>(i);
 		};
 
+	// Can appear anywhere
 	auto c_ =
 		+[](t_grammar_input i) -> t_context  {
 			return std::get<3>(i);
 		};
 
+	// They only appear after the first element
+	// of the hypothesis
 	auto l_ =
 		+[](t_grammar_input i) -> t_IV_w {
 			return std::get<4>(i);
@@ -367,35 +390,44 @@ public:
 		// sampled sentences have a reasonable length.
 		// In practice this means upweighting non-type-recursive rules.
 
+		// PART I
 		// The concepts to define the bit of the composition function
 		// that interprets nodes [Q IV]
+
+		// -> t_Q
+		add("%s.Q"					, q_						, 1);
 
 		// -> DP
 		add("( %s %s )"				, applyIVtoQ				, 1);
 
 		// -> IV
+		add("%s.L"					, l_Q						, 5);
+		add("%s.R"					, r_Q						, 5);
 		add("( union %s %s )"		, union_<t_IV>				, 1);
 		add("( intersection %s %s )", intersection<t_IV>		, 1);
 		add("( setminus %s %s )"	, setminus<t_IV>			, 1);
-		add("( nTh %s %s %s )"		, nTh<t_IV,t_int>			, 1);
+		/* add("( nTh %s %s %s )"		, nTh<t_IV,t_int>			, 1); */
+		add("( universe %s )"		, universe<t_IV>			, 1);
 
 		// -> bool
 		add("( %s %s )"				, applyIVtoDP				, 1);
-		add("( intEq %s %s )" 		, intEq<t_int,t_t>			, 0.5);
-		add("( intGt %s %s )"		, intGt<t_int,t_t>			, 0.5);
+		/* add("( intEq %s %s )" 		, intEq<t_int,t_t>			, 0.5); */
+		/* add("( intGt %s %s )"		, intGt<t_int,t_t>			, 0.5); */
 		/* add_terminal("true"		, true						, 0.1); */
 		/* add_terminal("false"		, false						, 0.1); */
-		add("( not %s )"			, not_<t_t>					, 0.1);
-		add("( and %s %s )"			, and_<t_t>					, 0.1);
-		add("( or %s %s )"			, or_<t_t>					, 0.1);
+		add("( not %s )"			, not_<t_t>					, 0.05);
+		add("( and %s %s )"			, and_<t_t>					, 0.05);
+		add("( or %s %s )"			, or_<t_t>					, 0.05);
+
 
 		// -> int
-		add("( cardinality %s %s )"	, cardinality<t_IV,t_int>	, 1);
-		add_terminal("0"			, 0							, 1);
-		add_terminal("1"			, 1							, 1);
-		add("( + %s %s )"			, plus<t_int>				, 0.2);
-		add("( - %s %s )"			, minus<t_int>				, 0.2);
+		/* add("( cardinality %s %s )"	, cardinality<t_IV,t_int>	, 1); */
+		/* add_terminal("0"			, 0							, 1); */
+		/* add_terminal("1"			, 1							, 1); */
+		/* add("( + %s %s )"			, plus<t_int>				, 0.1); */
+		/* add("( - %s %s )"			, minus<t_int>				, 0.1); */
 
+		// PART II
 		// The wrappers to define the quantifiers
 		// so that the first two arguments of the input do not
 		// appear in their definition
@@ -405,10 +437,13 @@ public:
 		/* add("( %s %s )"			, applyIVtoQ_w				, 0.1); */
 
 		// -> IV
+		add("%s.L"					, l_							, 5);
+		add("%s.R"					, r_							, 5);
 		add("( union %s %s )"		, union_<t_IV_w>				, 1);
 		add("( intersection %s %s )", intersection<t_IV_w>			, 1);
 		add("( setminus %s %s )"	, setminus<t_IV_w>				, 1);
 		add("( nTh %s %s %s )"		, nTh<t_IV_w,t_int_w>			, 1);
+		add("( universe %s )"		, universe<t_IV_w>				, 1);
 		
 		// -> bool
 		/* add("( %s %s )"			, applyIVtoDP_w					, 1); */
@@ -425,17 +460,13 @@ public:
 		add("( cardinality %s %s )"	, cardinality<t_IV_w,t_int_w>	, 1);
 		add_terminal("0"			, t_int_w(0)					, 1);
 		add_terminal("1"			, t_int_w(1)					, 1);
-		add("( + %s %s )"			, plus<t_int_w>					, 0.2);
-		add("( - %s %s )"			, minus<t_int_w>				, 0.2);
+		add("( + %s %s )"			, plus<t_int_w>					, 0.05);
+		add("( - %s %s )"			, minus<t_int_w>				, 0.05);
 
-		// The inputs
-		add("X"						, Builtins::X<QuantsGrammar>, 1);
-		add("%s.Q"					, q_						, 1);
-		add("%s.c"					, c_						, 1);
-		add("%s.L"					, l_Q						, 1);
-		add("%s.R"					, r_Q						, 1);
-		add("%s.L"					, l_						, 1);
-		add("%s.R"					, r_						, 1);
+		// PART III - can appear anywhere
+		add("X"						, Builtins::X<QuantsGrammar>	, 1);
+		// -> t_context
+		add("%s.c"					, c_							, 1);
 
 		/* for(int i=1;i<=10;i++) { */
 		/* 	add_terminal( */
@@ -530,7 +561,8 @@ public:
 		// initialized with current hypothesis
 		Agent<QuantsHypothesis> agent{*this};
 
-		std::vector<t_context> cs = generateContexts(cSize, nObs, local_rng);
+		std::vector<t_context> cs = generateContexts(
+			cSize, nObs, local_rng);
 
 		// produce data for approximating communicative accuracy
 		// NOTE: the data is assigned to the class variable commData
@@ -548,6 +580,15 @@ public:
 		double loglik = likelihoodWeight * commAcc;
 
 		return loglik;
+
+		// OLD: 
+		// Check that the composition operator in the hypothesis
+		// contains the quantifier, i.e., '.Q'
+		/* if ( this->string().find(".Q") != std::string::npos ){ */
+			// Block above went here
+		/* } else { */
+		/* 	return -std::numeric_limits<double>::infinity(); */
+		/* } */
 	}
 
 	// Extracts the component of a sentence from the LOT 
@@ -689,6 +730,8 @@ public:
 			true,
 			false
 		};
+		// The three quantifiers are part 
+		// of the agents' language
 		lexSem.add("Q1", q_n<1>());
 		lexSem.add("Q2", q_n<2>());
 		lexSem.add("Q3", q_n<3>());
