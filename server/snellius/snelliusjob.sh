@@ -16,13 +16,17 @@ module load parallel/20220722-GCCcore-11.3.0
 cd ../../
 make 
 
+DEFAULTLIK = 40
+# optional argument for likeweights
+ARG1=${1:-$DEFAULTLIK}
+
 # ID is a string with current time
 ID=$(date +"%Y%m%d_%H%M%S")
 ./main \
 	--steps 			100000 	 		\
 	--nobs 				250	 	 		\
 	--csize 			5 		 		\
-	--likelihoodweight 	40	 			\
+	--likelihoodweight 	$ARG1	 		\
 	--searchdepth		2		 		\
 	--fname 			"data/${ID}"	\
 	--ct				16
