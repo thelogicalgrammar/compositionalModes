@@ -48,6 +48,30 @@ private:
 
 public:
 
+	LexicalSemantics(
+			/* bool add_BCs, */
+			bool add_BFs,
+			bool add_IVs,
+			bool add_TVs,
+			bool add_DPs,
+			bool add_Qs
+		) {
+		if (add_BFs) addBFs();
+		if (add_IVs) addIVs();
+		if (add_TVs) addTVs();
+		if (add_DPs) addDPs();
+		if (add_Qs) addQs();
+	}
+
+	LexicalSemantics() {
+		addBFs();
+		addIVs();
+		addTVs();
+		addDPs();
+		addQs();
+	}
+
+
 	void add(std::string name, t_meaning m) {
 		interpretation_f[name] = m;
 	}
@@ -190,9 +214,29 @@ public:
 				};
 			}
 		);
+		
+		// add (common) names for the numbers 0 to 5 (inclusive)
+		// Define them as IVs so they can be used e.g., by the quantifiers
+		for (int i = 0; i < 6; i++) {
+			add(
+				std::to_string(i),
+				[i](t_context c) -> t_IV {
+					return [i](t_e x) -> t_t {
+						return std::get<0>(x) == i;
+					};
+				}
+			);
+		}
+
 	}
 
 	void addTVs() {
+		
+		// NOTE: At the moment these are never used because there are no
+		// words for individual concepts ( <s,e> ) in the lexicon.
+		// They could be redefined as taking IVs with a uniqueness presupposition
+		// (a kind of type shift et->e forced by the predicate).
+		// but I am not doing that for now.
 
 		// greater than
 		add( "gt",
@@ -234,17 +278,6 @@ public:
 			}
 		);
 		
-		// add (common) names for the numbers 0 to 5
-		for (int i = 0; i < 6; i++) {
-			add(
-				std::to_string(i),
-				[i](t_context c) -> t_IV {
-					return [i](t_e x) -> t_t {
-						return std::get<0>(x) == i;
-					};
-				}
-			);
-		}
 	}
 
 	void addDPs() {
@@ -330,29 +363,6 @@ public:
 			}
 		);
 
-	}
-
-	LexicalSemantics(
-			/* bool add_BCs, */
-			bool add_BFs,
-			bool add_IVs,
-			bool add_TVs,
-			bool add_DPs,
-			bool add_Qs
-		) {
-		if (add_BFs) addBFs();
-		if (add_IVs) addIVs();
-		if (add_TVs) addTVs();
-		if (add_DPs) addDPs();
-		if (add_Qs) addQs();
-	}
-
-	LexicalSemantics() {
-		addBFs();
-		addIVs();
-		addTVs();
-		addDPs();
-		addQs();
 	}
 
 	// Define .at access for the interpretation map

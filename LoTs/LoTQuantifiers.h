@@ -401,23 +401,24 @@ public:
 		add("( %s %s )"				, applyIVtoQ				, 1);
 
 		// -> IV
-		add("%s.L"					, l_Q						, 5);
-		add("%s.R"					, r_Q						, 5);
+		add("%s.L"					, l_Q						, 10);
+		add("%s.R"					, r_Q						, 10);
+		add("( universe %s )"		, universe<t_IV>			, 10);
+
 		add("( union %s %s )"		, union_<t_IV>				, 1);
 		add("( intersection %s %s )", intersection<t_IV>		, 1);
 		add("( setminus %s %s )"	, setminus<t_IV>			, 1);
 		/* add("( nTh %s %s %s )"		, nTh<t_IV,t_int>			, 1); */
-		add("( universe %s )"		, universe<t_IV>			, 1);
 
 		// -> bool
-		add("( %s %s )"				, applyIVtoDP				, 1);
+		add("( %s %s )"				, applyIVtoDP				, 10);
 		/* add("( intEq %s %s )" 		, intEq<t_int,t_t>			, 0.5); */
 		/* add("( intGt %s %s )"		, intGt<t_int,t_t>			, 0.5); */
 		/* add_terminal("true"		, true						, 0.1); */
 		/* add_terminal("false"		, false						, 0.1); */
-		add("( not %s )"			, not_<t_t>					, 0.05);
-		add("( and %s %s )"			, and_<t_t>					, 0.05);
-		add("( or %s %s )"			, or_<t_t>					, 0.05);
+		add("( not %s )"			, not_<t_t>					, 1);
+		add("( and %s %s )"			, and_<t_t>					, 1);
+		add("( or %s %s )"			, or_<t_t>					, 1);
 
 
 		// -> int
@@ -437,18 +438,18 @@ public:
 		/* add("( %s %s )"			, applyIVtoQ_w				, 0.1); */
 
 		// -> IV
-		add("%s.L"					, l_							, 5);
-		add("%s.R"					, r_							, 5);
+		add("%s.L"					, l_							, 10);
+		add("%s.R"					, r_							, 10);
+		add("( universe %s )"		, universe<t_IV_w>				, 10);
 		add("( union %s %s )"		, union_<t_IV_w>				, 1);
 		add("( intersection %s %s )", intersection<t_IV_w>			, 1);
 		add("( setminus %s %s )"	, setminus<t_IV_w>				, 1);
-		add("( nTh %s %s %s )"		, nTh<t_IV_w,t_int_w>			, 1);
-		add("( universe %s )"		, universe<t_IV_w>				, 1);
+		/* add("( nTh %s %s %s )"		, nTh<t_IV_w,t_int_w>			, 1); */
 		
 		// -> bool
 		/* add("( %s %s )"			, applyIVtoDP_w					, 1); */
-		add("( intEq %s %s )" 		, intEq<t_int_w,t_t_w>			, 1);
-		add("( intGt %s %s )"		, intGt<t_int_w,t_t_w>			, 1);
+		add("( intEq %s %s )" 		, intEq<t_int_w,t_t_w>			, 10);
+		add("( intGt %s %s )"		, intGt<t_int_w,t_t_w>			, 10);
 		// Don't need this for defining quantifiers
 		/* add_terminal("true"		, t_t_w{true}				, 0.1); */
 		/* add_terminal("false"		, t_t_w{false}				, 0.1); */
@@ -457,13 +458,14 @@ public:
 		add("( or %s %s )"			, or_<t_t_w>					, 1);
 
 		// -> int
-		add("( cardinality %s %s )"	, cardinality<t_IV_w,t_int_w>	, 1);
-		add_terminal("0"			, t_int_w(0)					, 1);
-		add_terminal("1"			, t_int_w(1)					, 1);
-		add("( + %s %s )"			, plus<t_int_w>					, 0.05);
-		add("( - %s %s )"			, minus<t_int_w>				, 0.05);
+		add_terminal("0"			, t_int_w(0)					, 10);
+		add_terminal("1"			, t_int_w(1)					, 10);
+		add("( cardinality %s %s )"	, cardinality<t_IV_w,t_int_w>	, 10);
+		add("( + %s %s )"			, plus<t_int_w>					, 1);
+		add("( - %s %s )"			, minus<t_int_w>				, 1);
 
 		// PART III - can appear anywhere
+		// -> t_grammar_input
 		add("X"						, Builtins::X<QuantsGrammar>	, 1);
 		// -> t_context
 		add("%s.c"					, c_							, 1);

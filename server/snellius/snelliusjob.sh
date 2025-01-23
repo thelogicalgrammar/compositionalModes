@@ -24,7 +24,7 @@ ARG1=${1:-$DEFAULTLIK}
 ID=$(date +"%Y%m%d_%H%M%S")
 ./main \
 	--steps 			100000 	 		\
-	--nobs 				250	 	 		\
+	--nobs 				400	 	 		\
 	--csize 			5 		 		\
 	--likelihoodweight 	$ARG1	 		\
 	--searchdepth		2		 		\
