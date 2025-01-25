@@ -7,7 +7,8 @@
 // NOTE: Ints must be unique!
 t_context generateContext(
 		size_t size,
-		std::mt19937& rng
+		std::mt19937& rng,
+		float p_target = 0.5
 	){
 
 	t_context context;
@@ -15,12 +16,14 @@ t_context generateContext(
 	std::set<int> ints;
 	t_intdist dist(-10, 10);
 	while (context.size() < size) {
+		// Define the integer component of the element
 		int i = dist(rng);
+		bool target = std::bernoulli_distribution(p_target)(rng);
 		if (ints.find(i) == ints.end()) {
 			ints.insert(i);
 			context.insert(std::make_tuple(
 				i,
-				dist(rng) > 0
+				target
 			));
 		}
 	}
@@ -32,12 +35,13 @@ std::vector<t_context> generateContexts(
 		size_t size,
 		// number of contexts to generate
 		size_t num,
-		std::mt19937& rng
+		std::mt19937& rng,
+		float p_target = 0.5
 	){
 
 	std::vector<t_context> contexts;
 	for (size_t i = 0; i < num; ++i) {
-		contexts.push_back(generateContext(size, rng));
+		contexts.push_back(generateContext(size, rng, p_target));
 	}
 	return contexts;
 }

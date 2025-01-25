@@ -133,19 +133,48 @@ int main(int argc, char** argv) {
 		
 		case SimulationType::TESTCOMMUNICATION: {
 
-			// High accuracy quantifiers 
-			/* ( ( X.Q X.R ) ( intersection X.R X.L ) ) */
-			std::string highQuantString = "1:%s | %s | %s | %s;3:( %s %s );7:( %s %s );6:%s.Q;0:X;4:%s.R;0:X;4:( intersection %s %s );4:%s.R;0:X;4:%s.L;0:X;";
-			/* ( intEq ( cardinality X.L X.c ) ( cardinality X.R X.c ) ) */
-			std::string highQ1string = "8:( intEq %s %s );10:( cardinality %s %s );9:%s.L;0:X;2:%s.c;0:X;10:( cardinality %s %s );9:%s.R;0:X;2:%s.c;0:X;";
-			/* ( intGt ( cardinality X.R X.c ) 0 ) */
-			std::string highQ2string = "8:( intGt %s %s );10:( cardinality %s %s );9:%s.R;0:X;2:%s.c;0:X;10:0;";
-			/* ( intGt ( cardinality X.R X.c ) ( cardinality X.L X.c ) ) */
-			std::string highQ3string = "8:( intGt %s %s );10:( cardinality %s %s );9:%s.R;0:X;2:%s.c;0:X;10:( cardinality %s %s );9:%s.L;0:X;2:%s.c;0:X";
+			// Low accuracy quantifiers 
+			// λx.( ( X.Q X.L ) X.L ) 
+			// "One thing is L"
+			// | ( intEq ( cardinality X.R X.c ) 1 ) 
+			// | ( intGt 1 0 ) 
+			// | ( intEq 0 1 )
+			std::string lowStringRepr = "1:%s | %s | %s | %s;3:( %s %s );7:( %s %s );6:%s.Q;0:X;4:%s.L;0:X;4:%s.L;0:X;8:( intEq %s %s );10:( cardinality %s %s );9:%s.R;0:X;2:%s.c;0:X;10:1;8:( intGt %s %s );10:1;10:0;8:( intEq %s %s );10:0;10:1";
 
-			// Sentence to reconstruct
-			std::string highStringRepr = 
-				highQuantString + highQ1string + highQ2string + highQ3string;
+			estimateCommAcc<QuantsHypothesis>(
+				lowStringRepr,
+				nObs,
+				cSize,
+				likelihoodWeight,
+				rng,
+				"./data/commAccLow.txt"
+			);
+
+			// Medium accuracy quantifiers 
+			// λx.( ( X.Q X.L ) ( setminus X.L X.R ) ) 
+			// | ( intGt 0 1 ) 
+			// | ( intGt 1 0 ) 
+			// "No R is L"
+			// | ( intEq ( cardinality X.R X.c ) 0 )
+			std::string mediumStringRepr = "1:%s | %s | %s | %s;3:( %s %s );7:( %s %s );6:%s.Q;0:X;4:%s.L;0:X;4:( setminus %s %s );4:%s.L;0:X;4:%s.R;0:X;8:( intGt %s %s );10:0;10:1;8:( intGt %s %s );10:1;10:0;8:( intEq %s %s );10:( cardinality %s %s );9:%s.R;0:X;2:%s.c;0:X;10:0";
+
+			estimateCommAcc<QuantsHypothesis>(
+				mediumStringRepr,
+				nObs,
+				cSize,
+				likelihoodWeight,
+				rng,
+				"./data/commAccMedium.txt"
+			);
+
+			// High accuracy quantifiers 
+			// λx.( ( X.Q ( intersection X.L X.R ) ) X.R ) 
+			// "Half of L is R"
+			// | ( intEq ( cardinality X.R X.c ) ( cardinality X.L X.c ) ) 
+			// | ( intGt 0 1 ) 
+			// "Some R is L"
+			// | ( intGt 0 ( cardinality X.L X.c ) )
+			std::string highStringRepr = "1:%s | %s | %s | %s;3:( %s %s );7:( %s %s );6:%s.Q;0:X;4:( intersection %s %s );4:%s.L;0:X;4:%s.R;0:X;4:%s.R;0:X;8:( intEq %s %s );10:( cardinality %s %s );9:%s.R;0:X;2:%s.c;0:X;10:( cardinality %s %s );9:%s.L;0:X;2:%s.c;0:X;8:( intGt %s %s );10:0;10:1;8:( intGt %s %s );10:0;10:( cardinality %s %s );9:%s.L;0:X;2:%s.c;0:X";
 
 			estimateCommAcc<QuantsHypothesis>(
 				highStringRepr,
@@ -156,72 +185,6 @@ int main(int argc, char** argv) {
 				"./data/commAccHigh.txt"
 			);
 			
-			// MediumHigh accuracy quantifiers 
-			/* ( ( X.Q X.R ) X.L ) */
-			std::string mediumHighQuantString = "1:%s | %s | %s | %s;3:( %s %s );7:( %s %s );6:%s.Q;0:X;4:%s.R;0:X;4:%s.L;0:X;";
-			/* ( intEq ( cardinality X.L X.c ) ( cardinality X.R X.c ) ) */
-			std::string mediumHighQ1string = "8:( intEq %s %s );10:( cardinality %s %s );9:%s.L;0:X;2:%s.c;0:X;10:( cardinality %s %s );9:%s.R;0:X;2:%s.c;0:X;";
-			/* ( intGt ( cardinality X.R X.c ) 0 ) */
-			std::string mediumHighQ2string = "8:( intGt %s %s );10:( cardinality %s %s );9:%s.R;0:X;2:%s.c;0:X;10:0;";
-			/* ( intGt ( cardinality X.R X.c ) ( cardinality X.L X.c ) ) */
-			std::string mediumHighQ3string = "8:( intGt %s %s );10:( cardinality %s %s );9:%s.R;0:X;2:%s.c;0:X;10:( cardinality %s %s );9:%s.L;0:X;2:%s.c;0:X";
-
-			// Sentence to reconstruct
-			std::string mediumHighStringRepr = 
-				mediumHighQuantString + mediumHighQ1string + mediumHighQ2string + mediumHighQ3string;
-
-			estimateCommAcc<QuantsHypothesis>(
-				mediumHighStringRepr,
-				nObs,
-				cSize,
-				likelihoodWeight,
-				rng,
-				"./data/commAccMediumHigh.txt"
-			);
-
-			// MediumLow accuracy quantifiers 
-			/* ( ( X.Q X.R ) X.R ) */
-			std::string mediumLowQuantString = "1:%s | %s | %s | %s;3:( %s %s );7:( %s %s );6:%s.Q;0:X;4:%s.R;0:X;4:%s.R;0:X;";
-			/* ( intEq ( cardinality X.L X.c ) ( cardinality X.R X.c ) ) */
-			std::string mediumLowQ1string = "8:( intEq %s %s );10:( cardinality %s %s );9:%s.L;0:X;2:%s.c;0:X;10:( cardinality %s %s );9:%s.R;0:X;2:%s.c;0:X;";
-			/* ( intGt ( cardinality X.R X.c ) 0 ) */
-			std::string mediumLowQ2string = "8:( intGt %s %s );10:( cardinality %s %s );9:%s.R;0:X;2:%s.c;0:X;10:0;";
-			/* ( intGt ( cardinality X.R X.c ) ( cardinality X.L X.c ) ) */
-			std::string mediumLowQ3string = "8:( intGt %s %s );10:( cardinality %s %s );9:%s.R;0:X;2:%s.c;0:X;10:( cardinality %s %s );9:%s.L;0:X;2:%s.c;0:X";
-
-			// Sentence to reconstruct
-			std::string mediumLowStringRepr = 
-				mediumLowQuantString + mediumLowQ1string + mediumLowQ2string + mediumLowQ3string;
-
-			estimateCommAcc<QuantsHypothesis>(
-				mediumLowStringRepr,
-				nObs,
-				cSize,
-				likelihoodWeight,
-				rng,
-				"./data/commAccMediumLow.txt"
-			);
-
-			// Low accuracy quantifiers 
-			/* ( intGt 0 1 ) */
-			std::string LowQuantString = "1:%s | %s | %s | %s;3:( intGt %s %s );5:0;5:1;";
-			/* ( intEq ( cardinality X.R X.c ) ( cardinality X.L X.c ) ) */
-			std::string LowQ1string = "8:( intEq %s %s );10:( cardinality %s %s );9:%s.R;0:X;2:%s.c;0:X;10:( cardinality %s %s );9:%s.L;0:X;2:%s.c;0:X;";
-			std::string LowQ2string = "8:( intEq %s %s );10:( cardinality %s %s );9:%s.R;0:X;2:%s.c;0:X;10:( cardinality %s %s );9:%s.L;0:X;2:%s.c;0:X;";
-			std::string LowQ3string = "8:( intEq %s %s );10:( cardinality %s %s );9:%s.R;0:X;2:%s.c;0:X;10:( cardinality %s %s );9:%s.L;0:X;2:%s.c;0:X;";
-
-			// Sentence to reconstruct
-			std::string lowStringRepr = 
-				LowQuantString + LowQ1string + LowQ2string + LowQ3string;
-
-			estimateCommAcc<QuantsHypothesis>(
-				lowStringRepr,
-				nObs,
-				cSize,
-				likelihoodWeight,
-				rng,
-				"./data/commAccLow.txt"
-			);
 
 			break;
 		}

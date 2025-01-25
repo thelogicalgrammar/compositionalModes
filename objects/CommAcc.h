@@ -33,32 +33,16 @@ void estimateCommAcc(
 
 	// store 100 runs 
 	std::vector<double> logliks;
-	for (int i = 0; i < 500; i++) {
+	int nruns = 10;
+	for (int i = 0; i < nruns; i++) {
 
-		std::cout << "Generating contexts " << i << std::endl;
-		std::vector<t_context> cs = generateContexts(cSize, nObs, rng);
-
-		// produce data for approximating communicative accuracy
-		std::cout << "Producing data from enumeration" << std::endl;
+		std::vector<t_context> cs = generateContexts(cSize, nObs, rng, 0.25);
 		typename Hyp::data_t commData = agent.produceDataFromEnumeration(
 				cs, rng, searchDepth);
-		/* typename Hyp::data_t commData = agent.produceData( */
-		/* 		cs, rng, searchDepth); */
-
-		// the new agent computes its communicative accuracy
-		std::cout << "Calculating communicative accuracy" << std::endl;
 		double commAcc = agent.communicativeAccuracy(commData, rng);
-
-		// The likelihood is the weighted sum of the communicative accuracy
-		// and the simplicity of the language.
-		// Note that commAcc is already the log of a probability
-		double loglik = log(likelihoodWeight) * commAcc;
-		
-		// add to the logliks
+		double loglik = likelihoodWeight * commAcc;
 		logliks.push_back(loglik);
-
-		// print progress
-		printProgress(static_cast<double>(i)/500);
+		printProgress(static_cast<double>(i)/nruns);
 	}
 	
 	// store the logliks in a file

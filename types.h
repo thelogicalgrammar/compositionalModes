@@ -120,6 +120,7 @@ using t_TandTtoT =
 // Some useful distributions
 using t_intdist = std::uniform_int_distribution<int>;
 using t_discr_dist = std::discrete_distribution<>;
+using t_bernoulli_dist = std::bernoulli_distribution;
 
 // Map from a type description to a tuple of 
 // (left type, right type)
