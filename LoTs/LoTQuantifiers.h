@@ -404,7 +404,6 @@ public:
 		add("%s.L"					, l_Q						, 10);
 		add("%s.R"					, r_Q						, 10);
 		add("( universe %s )"		, universe<t_IV>			, 10);
-
 		add("( union %s %s )"		, union_<t_IV>				, 1);
 		add("( intersection %s %s )", intersection<t_IV>		, 1);
 		add("( setminus %s %s )"	, setminus<t_IV>			, 1);
@@ -569,12 +568,18 @@ public:
 		// produce data for approximating communicative accuracy
 		// NOTE: the data is assigned to the class variable commData
 		// so that it can be accessed in the sampling loop for storage
-		commData = agent.produceDataFromEnumeration(
+		auto data = agent.produceDataFromEnumeration(
 			cs, local_rng, searchDepth);
-		/* commData = agent.produceData(cs, local_rng, searchDepth); */
 
-		// the new agent computes its communicative accuracy
-		double commAcc = agent.communicativeAccuracy(commData, local_rng);
+		// data is a vector of datum_t
+		commData = std::get<0>(data);
+		// utilities is a vector of doubles
+		auto utilities = std::get<1>(data);
+
+		double commAcc = 0;
+		// sum the utilities
+		for (size_t i = 0; i < utilities.size(); i++) {commAcc += utilities[i];}
+		commAcc /= nObs;
 
 		// The likelihood is the weighted sum of the communicative accuracy
 		// and the simplicity of the language.

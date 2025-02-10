@@ -1,10 +1,12 @@
 # pragma once
 
 using t_BTC_vec = std::vector<std::unique_ptr<BTC>>;
+// unnormalized distribution values
 using t_BTC_dist = std::tuple<
-	t_BTC_vec,
-	std::discrete_distribution<>
->;
+		t_BTC_vec,
+		std::vector<double>
+	>;
+enum productionMode { SAMPLE, ARGMAX };
 
 // Context variations are contexts
 // that differ from the observed context
@@ -39,6 +41,26 @@ t_contextVector generateContextVariations(const t_context& context) {
 
     return variations;
 }
+
+template <typename T>
+std::vector<std::pair<T, int>> countUniqueElements(const std::vector<T>& input) {
+
+    std::unordered_map<T, int> freqMap;
+
+    // Count occurrences of each element
+    for (const auto& elem : input) {
+        freqMap[elem]++;
+    }
+
+    // Transfer data to a vector
+    std::vector<std::pair<T, int>> uniqueElements(freqMap.begin(), freqMap.end());
+
+    // Optional: Sort by element value (if ordering is needed)
+    std::sort(uniqueElements.begin(), uniqueElements.end());
+
+    return uniqueElements;
+}
+
 
 // We assume Hyp defines the following on top of the usual stuff:
 // - getLexicalMeanings : returns a map containing learned meanings
@@ -85,8 +107,6 @@ private:
 			generateContextVariations(observedC);
 		int nTrue = 0;
 		for (t_context c : possibleContexts) {
-			// catch 'PresuppositionFailure' exception
-
 			try {
 				nTrue = nTrue + meaning(c);
 			} catch (PresuppositionFailure& e) {
@@ -94,15 +114,13 @@ private:
 				// it means that the context is not
 				// compatible with the meaning
 				// so we just ignore it
+				// and it doesn't increase nTrue
 				continue;
 			}
 		}
-		// compute informativity against 
-		// set of all possible alternatives
-		return -std::log(
-			(double)nTrue/
-			(double)possibleContexts.size()
-		);
+		// compute surprisal of true state given the meaning
+		// same informativity measure as RSA!
+		return -std::log((double)nTrue);
 	}
 
 	// Generates a random tree
@@ -245,6 +263,11 @@ private:
 
 public:
 
+	using t_sentences_utilities = std::tuple<
+			typename Hyp::data_t, 
+			std::vector<double>
+		>;
+
 	Agent() {
 		// initialize the maximum depth of utterances
 		initialMaxDepth = 4;
@@ -267,104 +290,12 @@ public:
 
 	Agent( std::string parseable ) : Agent(Hyp(parseable)) {}
 
-	double communicativeAccuracy(
-			Hyp::data_t data,
-			std::mt19937 rng
-		) const {
-
-		assert(hasChosenHyp&&"No hypothesis has been set yet");
-
-		// print length of data
-		/* std::cout << "Length of data: " << data.size() << std::endl; */
-
-		// Communicative accuracy is the total surprisal
-		// of the listener over the unobserved data
-		// after receiving the signal
-		double cumCA = 0;
-		// the data_t is a vector of datum_t
-		// each datum is a tuple of (context, utterance string)
-		for (auto datum : data) {
-
-			// Check if datum.input and datum.output are valid
-			if (datum.input.empty() || datum.output.empty()) {
-				continue;
-			}
-			// Get the context
-			t_context c = datum.input;
-			// Get the second element of each tuple in context
-			// which says whether the element is a target.
-			std::vector<bool> targets;
-			for (auto elem : c) { targets.push_back(std::get<1>(elem)); }
-
-			// Get the utterance *as a string*
-			std::string utt = datum.output;
-
-			// interpret the utterance, which gives the 
-			// P(i is a target|utterance) for each i in context
-			std::vector<double> probs = this->interpret(utt, c);
-			// check that probs is not empty
-			/* if (probs != NULL) */ 
-			// if different from null, check that probs and targets
-			// have the same size
-			if (probs.size() != targets.size()) {
-				std::cerr 
-					<< "Size mismatch between probs and targets." 
-					<< std::endl;
-				continue;
-			}
-			// compute total surprisal of targetness of elements
-			// in the context with the P(target|utterance)
-			// NOTE: This is not weighted by the P(target|utt):
-			// we are interested in total surprisal for the whole context!
-			double CA = 0;
-			for (size_t i = 0; i < targets.size(); i++) {
-				if (targets[i] == 0) {
-					// if the element is not a target
-					// then we care about the probability of it being 0
-					CA += std::log(1 - probs[i]);
-				} else {
-					// if the element is a target then 
-					// the probability of it being 1
-					CA += std::log(probs[i]);
-				}
-			}
-			cumCA += CA;
-		}
-		// normalize by the number of observations
-		// to get the average surprisal of an observation
-		cumCA /= data.size();
-		return cumCA;
-	}
-
 	// The agent sees a world of objects
 	// They have to produce a signal that 
 	// helps the listener identify the targets.
-	// Return a distribution over BTCs
-	// Encoding (an approximation of)
-	// the probability of producing
+	// Return encodes (an approximation of)
+	// the utility of producing
 	// each sentence in the given context
-	std::optional<t_BTC_dist> produce(
-			t_context c, 
-			t_BTC_compose compositionFn,
-			LexicalSemantics& lex,
-			t_terminalsMap& terminalsMap,
-			std::mt19937& rng
-		) const {
-
-		t_BTC_vec sentences;
-		// finds a bunch of random utterances
-		// that are all true of the context
-		sentences = generateRandomBTCsWithEvaluation(
-			c, compositionFn, lex, terminalsMap, rng
-		);
-
-		std::optional<t_BTC_dist> maybedist = produce(
-			c, compositionFn, lex, terminalsMap, rng, sentences
-		);
-		
-		return maybedist;
-	}
-
 	std::optional<t_BTC_dist> produce(
 			t_context c, 
 			t_BTC_compose compositionFn,
@@ -389,33 +320,30 @@ public:
 
 				// compute informativity
 				double info = this->computeInformativity(c, meaning);
+				
+				/* std::cout << "Sentence: " << s->toSExpression() << " "; */
+				/* std::cout << "Info: " << info << std::endl; */
 
 				// compute complexity (multiply by sizeScaling
 				// to make more comparable with info);
 				double complexity = 
 					this->computeComplexity(*s) * this->sizeScaling;
 
-				double utility = std::exp(this->alpha*(info - complexity));
+				double utility = this->alpha*(info - complexity);
 
-				/* s->printTree(this->lex); */
+				/* s->printTree(lex); */
 				/* std::cout << "info: " << info << std::endl; */
 				/* std::cout << "comp: " << complexity << std::endl; */
 				/* std::cout << utility << std::endl; */
 				/* std::cout << std::endl; */
 
 				// Since this ends up as parameter to a 
-				// discrete distribution, we don't need to
-				// normalize.
+				// discrete distribution that automatically normalizes, 
+				// we don't need to normalize here
 				utilities.push_back(utility);
 			}
 
-			// Selects an informative and simple utterance
-			t_discr_dist dist(utilities.begin(),utilities.end());
-
-			return std::make_tuple(
-				std::move(sentences),
-				dist
-			);
+			return std::make_tuple(std::move(sentences), utilities);
 
 		}
 	}
@@ -446,42 +374,14 @@ public:
 		);
 	}
 
-	std::optional<std::string> produceSingleString(
-			t_context c, 
-			std::mt19937& rng,
-			const std::optional<t_BTC_dist>& maybedist
-		) const {
-
-		if (maybedist.has_value()) {
-			// get the sentences and the distribution
-			const t_BTC_vec& sentences = std::get<0>(*maybedist);
-			t_discr_dist dist = std::get<1>(*maybedist);
-			// sample from the distribution
-			int index = dist(rng);
-			return std::make_optional(sentences[index]->toSExpression());
-		} else {
-			return std::nullopt;
-		}
-	}
-
-	std::optional<std::string> produceSingleString(
-			t_context c, 
-			std::mt19937& rng
-		) const {
-
-		// Use the chosen hypothesis by default
-		std::optional<t_BTC_dist> maybedist = produce(c, rng);
-		auto output = produceSingleString(c, rng, maybedist);
-		return output;
-	}
-
-	typename Hyp::data_t produceDataFromEnumeration(
+	// Returns the produced sentences and their utility
+	t_sentences_utilities produceDataFromEnumeration(
 			std::vector<t_context> cs, 
 			std::mt19937& rng,
-			size_t searchDepth = 2
+			size_t searchDepth = 2,
+			productionMode mode = productionMode::ARGMAX
 		) const {
 
-		typename Hyp::data_t data;
 		auto trueHyp = this->getHypothesis();
 
 		// get everything from the trueHyp
@@ -489,7 +389,7 @@ public:
 		t_terminalsMap terminalsMap = this->generateTerminalsMap(lex);
 		t_BTC_compose compositionFn = trueHyp.getCompositionF();
 
-		// Find all sentences given the grammar
+		// Find *all* sentences (true and false) given the grammar
 		// up to a certain depth
 		t_BTC_vec allSentences = enumerateSentences(
 				compositionFn,
@@ -498,84 +398,80 @@ public:
 				searchDepth
 			);
 
+		// store the produced sentences
+		typename Hyp::data_t producedSentences;
+		// utility of each produced sentence
+		std::vector<double> utilities;
 		// loop over contexts
 		for (auto& context : cs) {
 
 			// select the true sentences in context
-			t_BTC_vec sentences = selectTrueSentences(
+			t_BTC_vec trueSentences = selectTrueSentences(
 					context,
 					compositionFn,
 					copyBTCVec(allSentences)
 				);
 			
-			// Define a distribution over sentences
-			// NOTE: this moves 'sentences' so it is no longer usable
+			// Define a (maybe) distribution over sentences
+			// (it's empty if there are no true sentences)
+			// NOTE: this moves 'sentences' so it is no longer usable here
 			std::optional<t_BTC_dist> sentencesDist = produce(
 					context,
 					compositionFn,
 					lex,
 					terminalsMap,
 					rng,
-					sentences
+					trueSentences
 				);
 
-			// Select a single string
-			std::optional<std::string> maybestring = produceSingleString(
-					context,
-					rng,
-					sentencesDist
-				);
+			// Select a single string from the distribution
+			// either the ARGMAX or SAMPLE based on informativity
+			if (sentencesDist.has_value()) {
 
-			if (maybestring.has_value()) {
-				data.push_back(typename Hyp::datum_t{
+				// get the sentences and the distribution
+				const t_BTC_vec& sentences = 
+					std::get<0>(*sentencesDist);
+				const std::vector<double>& weights = 
+					std::get<1>(*sentencesDist);
+
+				int index;
+				if (mode == productionMode::ARGMAX) {
+					auto max_index = std::max_element(
+						weights.begin(),
+						weights.end()
+					);
+					// get the index of the most probable sentence
+					index = std::distance(weights.begin(), max_index);
+				} else if (mode == productionMode::SAMPLE) {
+					// define distribution from the weights
+					t_discr_dist dist = 
+						t_discr_dist(weights.begin(),weights.end());
+					// sample from the distribution
+					index = dist(rng);
+				} else {
+					throw std::runtime_error("Unknown production mode");
+				}
+
+				std::string producedString = sentences[index]->toSExpression();
+				producedSentences.push_back(typename Hyp::datum_t{
 					context, 
-					*maybestring, 
+					producedString,
 					1.0
 				});
+				utilities.push_back(weights[index]);
 			} else {
 				throw std::runtime_error("No data produced");
 			}
 		}
-		return data;
-	}
 
-	typename Hyp::data_t produceData(
-			std::vector<t_context> cs, 
-			std::mt19937& rng,
-			double pRight
-		) const {
-
-		typename Hyp::data_t data;
-
-		// loop over contexts
-		for (auto& context : cs) {
-			auto maybestring = produceSingleString(context, rng);
-			if (maybestring.has_value()) {
-				data.push_back(typename Hyp::datum_t{
-					context, *maybestring, pRight
-				});
-			} else {
-				throw std::runtime_error("No data produced");
-			}
+		auto vec = countUniqueElements<double>(utilities);
+		std::cout << std::endl;
+		std::cout << "Utilities counts" << std::endl;
+		for (const auto& [loglik, count] : vec) {
+			std::cout << loglik << " : " << count << std::endl;
 		}
-		return data;
-	}
-
-	typename Hyp::data_t produceData(
-			size_t cSize,
-			size_t nObs,
-			std::mt19937& rng,
-			double pRight
-		) const {
-
-		std::vector<t_context> cs = generateContexts(
-			cSize, nObs, rng);
-		return produceData(cs, rng, pRight);
-	}
-
-	typename Hyp::data_t produceData(
-			size_t cSize, size_t nObs, std::mt19937& rng) const {
-		return produceData(cSize, nObs, rng, 1.0);
+	
+		return std::make_tuple(producedSentences, utilities);
 	}
 
 	// Goes from a sentence to the probability

@@ -133,58 +133,169 @@ int main(int argc, char** argv) {
 		
 		case SimulationType::TESTCOMMUNICATION: {
 
-			// Low accuracy quantifiers 
-			// λx.( ( X.Q X.L ) X.L ) 
-			// "One thing is L"
-			// | ( intEq ( cardinality X.R X.c ) 1 ) 
-			// | ( intGt 1 0 ) 
-			// | ( intEq 0 1 )
-			std::string lowStringRepr = "1:%s | %s | %s | %s;3:( %s %s );7:( %s %s );6:%s.Q;0:X;4:%s.L;0:X;4:%s.L;0:X;8:( intEq %s %s );10:( cardinality %s %s );9:%s.R;0:X;2:%s.c;0:X;10:1;8:( intGt %s %s );10:1;10:0;8:( intEq %s %s );10:0;10:1";
+			/* // λx.( ( X.Q X.L ) X.L ) */ 
+			/* // "Exactly one thing is L" */
+			/* // ( intEq ( cardinality X.R X.c ) 1 ) */ 
+			/* // ( intGt 1 0 ) */ 
+			/* // ( intEq 0 1 ) */
+			/* std::string x1 = */ 
+			/* 	"1:%s | %s | %s | %s;3:( %s %s );7:( %s %s );6:%s.Q;0:X;4:%s.L;0:X;4:%s.L;0:X;" */
+			/* 	"8:( intEq %s %s );10:( cardinality %s %s );9:%s.R;0:X;2:%s.c;0:X;10:1;" */
+			/* 	"8:( intGt %s %s );10:1;10:0;" */
+			/* 	"8:( intEq %s %s );10:0;10:1"; */
 
-			estimateCommAcc<QuantsHypothesis>(
-				lowStringRepr,
-				nObs,
-				cSize,
-				likelihoodWeight,
-				rng,
-				"./data/commAccLow.txt"
-			);
+			/* estimateCommAcc<QuantsHypothesis>( */
+			/* 	x1, */
+			/* 	nObs, */
+			/* 	cSize, */
+			/* 	likelihoodWeight, */
+			/* 	rng, */
+			/* 	"./data/exactlyOneThing.txt" */
+			/* ); */
 
-			// Medium accuracy quantifiers 
 			// λx.( ( X.Q X.L ) ( setminus X.L X.R ) ) 
-			// | ( intGt 0 1 ) 
-			// | ( intGt 1 0 ) 
-			// "No R is L"
-			// | ( intEq ( cardinality X.R X.c ) 0 )
-			std::string mediumStringRepr = "1:%s | %s | %s | %s;3:( %s %s );7:( %s %s );6:%s.Q;0:X;4:%s.L;0:X;4:( setminus %s %s );4:%s.L;0:X;4:%s.R;0:X;8:( intGt %s %s );10:0;10:1;8:( intGt %s %s );10:1;10:0;8:( intEq %s %s );10:( cardinality %s %s );9:%s.R;0:X;2:%s.c;0:X;10:0";
+			// ( intGt 0 1 ) 
+			// ( intGt 1 0 ) 
+			// "All L is R"
+			// ( intEq ( cardinality X.R X.c ) 0 )
+			std::string x2 = 
+				"1:%s | %s | %s | %s;3:( %s %s );7:( %s %s );6:%s.Q;0:X;4:%s.L;0:X;4:( setminus %s %s );4:%s.L;0:X;4:%s.R;0:X;"
+				"8:( intGt %s %s );10:0;10:1;"
+				"8:( intGt %s %s );10:1;10:0;"
+				"8:( intEq %s %s );10:( cardinality %s %s );9:%s.R;0:X;2:%s.c;0:X;10:0";
 
 			estimateCommAcc<QuantsHypothesis>(
-				mediumStringRepr,
+				x2,
 				nObs,
 				cSize,
 				likelihoodWeight,
 				rng,
-				"./data/commAccMedium.txt"
-			);
-
-			// High accuracy quantifiers 
-			// λx.( ( X.Q ( intersection X.L X.R ) ) X.R ) 
-			// "Half of L is R"
-			// | ( intEq ( cardinality X.R X.c ) ( cardinality X.L X.c ) ) 
-			// | ( intGt 0 1 ) 
-			// "Some R is L"
-			// | ( intGt 0 ( cardinality X.L X.c ) )
-			std::string highStringRepr = "1:%s | %s | %s | %s;3:( %s %s );7:( %s %s );6:%s.Q;0:X;4:( intersection %s %s );4:%s.L;0:X;4:%s.R;0:X;4:%s.R;0:X;8:( intEq %s %s );10:( cardinality %s %s );9:%s.R;0:X;2:%s.c;0:X;10:( cardinality %s %s );9:%s.L;0:X;2:%s.c;0:X;8:( intGt %s %s );10:0;10:1;8:( intGt %s %s );10:0;10:( cardinality %s %s );9:%s.L;0:X;2:%s.c;0:X";
-
-			estimateCommAcc<QuantsHypothesis>(
-				highStringRepr,
-				nObs,
-				cSize,
-				likelihoodWeight,
-				rng,
-				"./data/commAccHigh.txt"
+				"./data/all.txt"
 			);
 			
+			/* // λx.( ( X.Q ( intersection X.L X.R ) ) X.R ) */ 
+			/* // "No R is L" */
+			/* // ( intEq ( cardinality X.L X.c ) 0 ) */
+			/* // ( intGt 0 1 ) */ 
+			/* // ( intGt 0 1 ) */ 
+			/* std::string x3 = */ 
+			/* 	"1:%s | %s | %s | %s;3:( %s %s );7:( %s %s );6:%s.Q;0:X;4:( intersection %s %s );4:%s.L;0:X;4:%s.R;0:X;4:%s.R;0:X;" */
+			/* 	"8:( intEq %s %s );10:( cardinality %s %s );9:%s.L;0:X;2:%s.c;0:X;10:0;" */
+			/* 	"8:( intGt %s %s );10:0;10:1;" */
+			/* 	"8:( intGt %s %s );10:0;10:1"; */
+
+			/* estimateCommAcc<QuantsHypothesis>( */
+			/* 	x3, */
+			/* 	nObs, */
+			/* 	cSize, */
+			/* 	likelihoodWeight, */
+			/* 	rng, */
+			/* 	"./data/no.txt" */
+			/* ); */
+
+			/* // λx.( ( X.Q ( intersection X.L X.R ) ) X.R ) */ 
+			/* // ( intGt 0 1 ) */ 
+			/* // ( intGt 0 1 ) */ 
+			/* // "Some and not all R is L" */
+			/* // ( intGt 0 ( cardinality X.L X.c ) ) etc. */
+			/* std::string x4 = */ 
+			/* 	"1:%s | %s | %s | %s;3:( %s %s );7:( %s %s );6:%s.Q;0:X;4:( intersection %s %s );4:%s.L;0:X;4:%s.R;0:X;4:%s.R;0:X;" */
+			/* 	"8:( intGt %s %s );10:0;10:1;" */
+			/* 	"8:( intGt %s %s );10:0;10:1;" */
+			/* 	"8:( and %s %s );8:( not %s );8:( intGt %s %s );10:( cardinality %s %s );9:%s.L;0:X;2:%s.c;0:X;10:0;8:( intEq %s %s );10:0;10:( cardinality %s %s );9:%s.L;0:X;2:%s.c;0:X;9:%s.R;0:X;2:%s.c;0:X"; */
+
+			/* estimateCommAcc<QuantsHypothesis>( */
+			/* 	x4, */
+			/* 	nObs, */
+			/* 	cSize, */
+			/* 	likelihoodWeight, */
+			/* 	rng, */
+			/* 	"./data/someNotAll.txt" */
+			/* ); */
+			
+			/* // λx.( ( X.Q ( intersection X.L X.R ) ) X.R ) */ 
+			/* // ( intGt 0 1 ) */ 
+			/* // ( intGt 0 1 ) */ 
+			/* // "Some R is L" */
+			/* // ( intGt 0 ( cardinality X.L X.c ) ) */
+			/* std::string x5 = */ 
+			/* 	"1:%s | %s | %s | %s;3:( %s %s );7:( %s %s );6:%s.Q;0:X;4:( intersection %s %s );4:%s.L;0:X;4:%s.R;0:X;4:%s.R;0:X;" */
+			/* 	"8:( intGt %s %s );10:0;10:1;" */
+			/* 	"8:( intGt %s %s );10:0;10:1;" */
+			/* 	"8:( intGt %s %s );10:( cardinality %s %s );9:%s.L;0:X;2:%s.c;0:X;10:0"; */
+
+			/* estimateCommAcc<QuantsHypothesis>( */
+			/* 	x5, */
+			/* 	nObs, */
+			/* 	cSize, */
+			/* 	likelihoodWeight, */
+			/* 	rng, */
+			/* 	"./data/some.txt" */
+			/* ); */
+
+			/* // λx.( ( X.Q ( intersection X.L X.R ) ) X.R ) */ 
+			/* // "No R is L" */
+			/* // ( intEq ( cardinality X.L X.c ) 0 ) */
+			/* // ( intGt 0 1 ) */ 
+			/* // "Some R is L" */
+			/* // ( intGt 0 ( cardinality X.L X.c ) ) */
+			/* std::string x6 = */ 
+			/* 	"1:%s | %s | %s | %s;3:( %s %s );7:( %s %s );6:%s.Q;0:X;4:( intersection %s %s );4:%s.L;0:X;4:%s.R;0:X;4:%s.R;0:X;" */
+			/* 	"8:( intEq %s %s );10:( cardinality %s %s );9:%s.L;0:X;2:%s.c;0:X;10:0;" */
+			/* 	"8:( intGt %s %s );10:0;10:1;" */
+			/* 	"8:( intGt %s %s );10:( cardinality %s %s );9:%s.L;0:X;2:%s.c;0:X;10:0"; */
+
+			/* estimateCommAcc<QuantsHypothesis>( */
+			/* 	x6, */
+			/* 	nObs, */
+			/* 	cSize, */
+			/* 	likelihoodWeight, */
+			/* 	rng, */
+			/* 	"./data/no_some.txt" */
+			/* ); */
+			
+			/* // λx.( ( X.Q ( intersection X.L X.R ) ) X.R ) */ 
+			/* // "No R is L" */
+			/* // ( intEq ( cardinality X.L X.c ) 0 ) */
+			/* // "All R is L" */
+			/* // ( intEq ( cardinality X.L X.c ) ( cardinality X.R X.c ) ) */
+			/* // "Some R is L" */
+			/* // ( intGt 0 ( cardinality X.L X.c ) ) */
+			/* std::string x7 = */ 
+			/* 	"1:%s | %s | %s | %s;3:( %s %s );7:( %s %s );6:%s.Q;0:X;4:( intersection %s %s );4:%s.L;0:X;4:%s.R;0:X;4:%s.R;0:X;" */
+			/* 	"8:( intEq %s %s );10:( cardinality %s %s );9:%s.L;0:X;2:%s.c;0:X;10:0;" */
+			/* 	"8:( intEq %s %s );10:( cardinality %s %s );9:%s.L;0:X;2:%s.c;0:X;10:( cardinality %s %s );9:%s.R;0:X;2:%s.c;0:X;" */
+			/* 	"8:( intGt %s %s );10:( cardinality %s %s );9:%s.L;0:X;2:%s.c;0:X;10:0"; */
+
+			/* estimateCommAcc<QuantsHypothesis>( */
+			/* 	x7, */
+			/* 	nObs, */
+			/* 	cSize, */
+			/* 	likelihoodWeight, */
+			/* 	rng, */
+			/* 	"./data/no_all_some.txt" */
+			/* ); */
+			
+			// λx.( ( X.Q ( intersection X.L X.R ) ) X.R ) 
+			// ( intGt 0 1 ) 
+			// "All R is L"
+			// ( intEq ( cardinality X.L X.c ) ( cardinality X.R X.c ) )
+			// "Some and not all R is L"
+			// ( intGt 0 ( cardinality X.L X.c ) ) etc.
+			std::string x8 = 
+				"1:%s | %s | %s | %s;3:( %s %s );7:( %s %s );6:%s.Q;0:X;4:( intersection %s %s );4:%s.L;0:X;4:%s.R;0:X;4:%s.R;0:X;"
+				"8:( intGt %s %s );10:0;10:1;"
+				"8:( intEq %s %s );10:( cardinality %s %s );9:%s.L;0:X;2:%s.c;0:X;10:( cardinality %s %s );9:%s.R;0:X;2:%s.c;0:X;"
+				"8:( and %s %s );8:( intGt %s %s );10:( cardinality %s %s );9:%s.R;0:X;2:%s.c;0:X;10:( cardinality %s %s );9:%s.L;0:X;2:%s.c;0:X;8:( intGt %s %s );10:( cardinality %s %s );9:%s.L;0:X;2:%s.c;0:X;10:0";
+
+			estimateCommAcc<QuantsHypothesis>(
+				x8,
+				nObs,
+				cSize,
+				likelihoodWeight,
+				rng,
+				"./data/all_someNotAll.txt"
+			);
 
 			break;
 		}
@@ -209,11 +320,6 @@ int main(int argc, char** argv) {
 				generateContexts(cSize, nObs, rng),
 				rng
 			);
-
-			std::cout << "Data size: " << data.size() << std::endl;
-			for (const auto& datum : data) {
-				std::cout << datum << std::endl;
-			}
 
 			break;
 		}
