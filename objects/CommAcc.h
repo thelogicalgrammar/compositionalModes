@@ -17,24 +17,34 @@ void estimateCommAcc(
 		size_t nObs,
 		size_t cSize,
 		double likelihoodWeight,
+		double pTarget,
 		std::mt19937& rng,
 		const std::string& fname,
-		size_t searchDepth = 2
+		size_t searchDepth = 2,
+		bool pragmatic = false
 	){
 	// Make sure that this is the same as compute_likelihood
 
 	Agent<Hyp> agent(stringRepr);
 
-	Hyp::setParams(nObs, cSize, likelihoodWeight, rng, searchDepth);
+	Hyp::setParams(
+		nObs,
+		cSize,
+		likelihoodWeight,
+		rng,
+		searchDepth,
+		pTarget,
+		pragmatic
+	);
 
 	// store runs 
 	std::vector<double> logliks;
 	int nruns = 20;
 	for (int i = 0; i < nruns; i++) {
 
-		std::vector<t_context> cs = generateContexts(cSize, nObs, rng);
+		std::vector<t_context> cs = generateContexts(cSize, nObs, rng, pTarget);
 		auto commData = agent.produceDataFromEnumeration(
-			cs, rng, searchDepth);
+			cs, rng, searchDepth, pragmatic);
 		// data is a vector of datum_t
 		auto data = std::get<0>(commData);
 		// utilities is a vector of doubles 
@@ -45,7 +55,7 @@ void estimateCommAcc(
 			<< "Value: " 
 			<< agent.getHypothesis().string() 
 			<< std::endl;
-		for (int h = 0; h < data.size(); h++) {
+		for (size_t h = 0; h < data.size(); h++) {
 			std::cout << data[h] << " Utility: " << utilities[h] << std::endl;
 		}
 		std::cout << std::endl;

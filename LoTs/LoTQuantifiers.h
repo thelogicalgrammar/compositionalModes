@@ -10,6 +10,8 @@ using t_int = int;
 // involved in the composition function and those involved
 // in the quantifiers definitions (since the specific arguments
 // that the two can take are different)
+// T is the type of the meaning function
+// V is the type of the argument to the meaning function
 template <typename T>
 struct WrapperC {
 	T i;
@@ -70,6 +72,8 @@ using t_TC_w  = WrapperF<t_TC,t_BC>;
 using t_IV_w  = WrapperF<t_IV,t_e>;
 using t_DP_w  = WrapperF<t_DP,t_IV>;
 using t_TV_w  = WrapperF<t_TV,t_e>;
+using t_PM_w  = WrapperF<t_PM,t_IV>;
+using t_PMM_w = WrapperF<t_PMM,t_IV>;
 using t_Q_w   = WrapperF<t_Q,t_IV>;
 
 // Input and output types for each sentence produced by the grammar.
@@ -118,6 +122,8 @@ template <> struct accepts_arg< t_TC_M, t_t_M> :  std::true_type {};
 template <> struct accepts_arg< t_IV_M, t_e_M> :  std::true_type {};
 template <> struct accepts_arg< t_DP_M, t_IV_M>:  std::true_type {};
 template <> struct accepts_arg< t_TV_M, t_e_M> :  std::true_type {};
+template <> struct accepts_arg< t_PM_M, t_IV_M>:  std::true_type {};
+template <> struct accepts_arg< t_PMM_M, t_IV_M>: std::true_type {};
 template <> struct accepts_arg< t_Q_M,  t_IV_M>:  std::true_type {};
 template <typename T, typename U>
 inline constexpr bool accepts_arg_v = accepts_arg<T, U>::value;
@@ -316,25 +322,29 @@ namespace Quants_DSL{
 
 	/////// NOT IN VAN DE POL ///////
 
-	/* 	auto complement = */ 
-	/* 		+[](t_IV m) -> t_IV { */
-	/* 			return t_IV([m](t_e e) -> t_t {return !m(e);}); */
-	/* 		}; */
+	// template < typename tIV >
+	// auto complement = 
+	// 	+[](tIV m) -> tIV {
+	// 		return tIV([m](t_e e) -> t_t {return !m(e);});
+	// 	};
 
-	/* 	auto include = */
-	/* 		+[](t_IV m1, t_IV m2) -> t_t { */
-	/* 			bool out = true; */
-	/* 			for (auto e : c) { */
-	/* 				if (m1(e) && !m2(e)) { */
-	/* 					out = false; */
-	/* 					break; */
-	/* 				} */
-	/* 			} */
-	/* 			return out; */
-	/* 		}; */
+	template < typename tIV, typename BOOL >
+	auto isSubset =
+		+[](tIV m1, tIV m2, t_context c) -> BOOL {
+			bool out = true;
+			for (auto e : c) {
+				if (m1(e) && !m2(e)) {
+					out = false;
+					break;
+				}
+			}
+			return out;
+		};
 
 }
 
+// This is the grammar to define the hypotheses we are searching through.
+// Its productions contain the composition function and the quantifiers.
 class QuantsGrammar : public Grammar< 
 		t_grammar_input,
 		t_grammar_output,
@@ -390,6 +400,12 @@ public:
 		// sampled sentences have a reasonable length.
 		// In practice this means upweighting non-type-recursive rules.
 
+		// NOTE: Most of the functions are defined as templates
+		// so that they are specified differently for the two
+		// components of the hypothesis (composition function and quantifiers).
+		// The first parts e.g., uses t_IV, while the second parts use t_IV_w.
+		//
+
 		// PART I
 		// The concepts to define the bit of the composition function
 		// that interprets nodes [Q IV]
@@ -418,6 +434,7 @@ public:
 		add("( not %s )"			, not_<t_t>					, 1);
 		add("( and %s %s )"			, and_<t_t>					, 1);
 		add("( or %s %s )"			, or_<t_t>					, 1);
+		// add("( isSubset %s %s %s )"	, isSubset<t_IV,t_t>			, 1);
 
 
 		// -> int
@@ -455,6 +472,7 @@ public:
 		add("( not %s )"			, not_<t_t_w>					, 1);
 		add("( and %s %s )"			, and_<t_t_w>					, 1);
 		add("( or %s %s )"			, or_<t_t_w>					, 1);
+		// add("( isSubset %s %s %s )"	, isSubset<t_IV_w,t_t_w>		, 1);
 
 		// -> int
 		add_terminal("0"			, t_int_w(0)					, 10);
@@ -487,10 +505,10 @@ public:
 
 // The idea here is to run a tradeoff analysis of communicative
 // accuracy and simplicity of the language. 
-// This is done by using Fleet to find languages that are simple
+// This is done by using Fleet to find languages that tend to be simple
 // with a likelihood function that is just the weighted communicative accuracy.
 // This simulation runs the analysis for a single likelihood weight.
-// Keep meaningful t_datum and t_data even if they are not used,
+// NOTE: Keep meaningful t_datum and t_data even if they are not used,
 // because they can be used in e.g., communicativeAccuracy to manage the
 // produced observations.
 
@@ -516,8 +534,23 @@ private:
 	// Maximum depth of signals when enumerating utterances
 	// to estimate communicative accuracy
 	static inline size_t searchDepth = 2;
-	// For storing
+	// Probability of target in the context
+	static inline double pTarget = 0.5;
+	static inline bool pragmatic = false;
+	// For storing. 
+	// NOTE: This is not static! It depends on the specific hypothesis
 	data_t commData;
+
+	// For defining the lexicon
+	bool add_es = true;
+	bool add_BFs = false;
+	bool add_IVs = true;
+	bool add_TVs = true;
+	// For adding everything, nothing, and something
+	bool add_DPs = false;
+	bool add_PMs = true;
+	bool add_PMMs = true;
+	bool add_Qs = false;
 
 public:
 	using Super = DeterministicLOTHypothesis<
@@ -530,17 +563,24 @@ public:
 
 	using Super::Super; 
 
-	static void setParams(size_t nObs, 
-						  size_t cSize,
-						  double likelihoodWeight,
+	static void setParams(const size_t nObs, 
+						  const size_t cSize,
+						  const double likelihoodWeight,
 						  std::mt19937& local_rng,
-						  size_t searchDepth) {
+						  const size_t searchDepth,
+						  const double pTarget,
+						  const bool pragmatic) {
+
+		// Set the parameters for the language hypothesis
+		// This is a static method of the LangHyp class
 
 		QuantsHypothesis::nObs = nObs;
 		QuantsHypothesis::cSize = cSize;
 		QuantsHypothesis::likelihoodWeight = likelihoodWeight;
 		QuantsHypothesis::local_rng = local_rng;
 		QuantsHypothesis::searchDepth = searchDepth;
+		QuantsHypothesis::pTarget = pTarget;
+		QuantsHypothesis::pragmatic = pragmatic;
 	}
 
 	QuantsHypothesis() : Super () {
@@ -563,13 +603,14 @@ public:
 		Agent<QuantsHypothesis> agent{*this};
 
 		std::vector<t_context> cs = generateContexts(
-			cSize, nObs, local_rng);
+			cSize, nObs, local_rng, pTarget);
 
 		// produce data for approximating communicative accuracy
+		// A sentence is produced for each context.
 		// NOTE: the data is assigned to the class variable commData
 		// so that it can be accessed in the sampling loop for storage
 		auto data = agent.produceDataFromEnumeration(
-			cs, local_rng, searchDepth);
+			cs, local_rng, searchDepth, pragmatic);
 
 		// data is a vector of datum_t
 		commData = std::get<0>(data);
@@ -579,6 +620,7 @@ public:
 		double commAcc = 0;
 		// sum the utilities
 		for (size_t i = 0; i < utilities.size(); i++) {commAcc += utilities[i];}
+		// take the average utility
 		commAcc /= nObs;
 
 		// The likelihood is the weighted sum of the communicative accuracy
@@ -598,8 +640,12 @@ public:
 		/* } */
 	}
 
-	// Extracts the component of a sentence from the LOT 
-	// that encodes the composition function.
+	// The hypotheses contain two components:
+	// 1. The composition function
+	// 2. The quantifiers
+	// This function extracts the composition function from the hypothesis.
+	// It is used in the likelihood function to compose the meanings
+	// of the quantifiers.
 	t_BTC_compose getCompositionF() {
 		// Return a composition function that:
 		// 1. If the types are t_Q_M and t_IV_M, then calls the relevant
@@ -652,7 +698,7 @@ public:
 										return tv;
 									// catch bad_function_call
 									} catch (std::bad_function_call& e) {
-										std::cout << "here 1" << std::endl;
+										std::cout << "something went wrong with the composition function" << std::endl;
 										std::terminate();
 									}
 								};
@@ -661,12 +707,12 @@ public:
 						);
 						return dpM;
 					} else if constexpr (accepts_arg_v<T,U>) {
-						// Otherwise apply f to arg
+						// Otherwise, apply f to arg
 						return [f,arg](t_context c) -> auto {
 							return f(c)(arg(c));
 						};
 					} else {
-						// They don't match
+						// They don't match, so return empty meaning
 						return t_meaning(Empty_M());
 					}
 				},
@@ -677,7 +723,7 @@ public:
 
 	// Returns a t_meaning containing type t_Q_M.
 	// Effectively, this is taking the component of a grammar's sentence
-	// that deals with defining a quantifier
+	// that deals with defining a quantifier.
 	// (which of the quantifiers is specified by i)
 	template< int i >
 	auto q_n () {
@@ -728,21 +774,28 @@ public:
 	}
 
 	LexicalSemantics getLexicon() {
+
 		// the booleans are specifying which groups of words to include 
 		// in the lexicon, by their type.
 		LexicalSemantics lexSem{
-			true,
-			true,
-			true,
-			true,
-			false
+			cSize,
+			add_es,
+			add_BFs,
+			add_IVs,
+			add_TVs,
+			add_DPs,
+			add_PMs,
+			add_PMMs,
+			add_Qs
 		};
+
 		// The three quantifiers are part 
 		// of the agents' language
 		lexSem.add("Q1", q_n<1>());
 		lexSem.add("Q2", q_n<2>());
 		lexSem.add("Q3", q_n<3>());
 		return lexSem;
+	
 	}
 	
 };

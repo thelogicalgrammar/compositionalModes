@@ -14,8 +14,14 @@ using t_TC  = ft< t_BC, t_t	 >; // e.g., "if x then y else z"
 using t_IV  = ft< t_t,  t_e  >; // IV, CN, ADJ
 using t_DP  = ft< t_t,  t_IV >; // DP (e.g., "something (is)")
 using t_TV  = ft< t_IV, t_e  >; // TV, P
+// These are type <<e, t>, <e, t>>
+// Predicate Modifiers
+using t_PM  = ft< t_IV, t_IV >; // e.g., negation of an IV
+// These are type <<e, t>, < <e, t>, <e, t> >>
+// Predicate Modifiers Modifiers
+using t_PMM = ft< t_PM, t_IV >; // e.g., coordination of IVs
 using t_Q   = ft< t_DP, t_IV >;
-/* using t_ADJ = ft< t_IV, t_IV >; */
+
 
 // TO ADD
 //
@@ -65,6 +71,8 @@ using t_IV_M  = ft< t_IV,  t_context >;
 using t_DP_M  = ft< t_DP,  t_context >;
 using t_TV_M  = ft< t_TV,  t_context >;
 using t_Q_M   = ft< t_Q,   t_context >;
+using t_PM_M  = ft< t_PM,  t_context >;
+using t_PMM_M = ft< t_PMM, t_context >;
 using Empty_M = ft< Empty, t_context >;
 
 
@@ -82,6 +90,8 @@ using t_extension = std::variant<
 	t_DP, 
 	t_TV,
 	t_Q,
+	t_PM,
+	t_PMM,
 	Empty
 >;
 
@@ -96,6 +106,8 @@ using t_meaning = std::variant<
 	t_DP_M, 
 	t_TV_M,
 	t_Q_M,
+	t_PM_M,
+	t_PMM_M,
 	Empty_M
 >;
 

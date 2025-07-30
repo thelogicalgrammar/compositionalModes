@@ -20,15 +20,16 @@ DEFAULTLIK = 40
 # optional argument for likeweights
 ARG1=${1:-$DEFAULTLIK}
 
-# ID is a string with current time
-ID=$(date +"%Y%m%d_%H%M%S")
+# ID is a string with current time up to milliseconds
+ID=$(date +"%Y%m%d_%H%M%S_%3N")
 ./main \
 	--steps 			100000 	 		\
-	--nobs 				1000	 	 	\
+	--nobs 				500		 	 	\
 	--csize 			5 		 		\
 	--likelihoodweight 	$ARG1	 		\
 	--searchdepth		2		 		\
 	--fname 			"data/${ID}"	\
+	--pragmatic			1				\
 	--ct				16
 
 # ./main --steps 10000 --nobs 5 --csize 5 --likelihoodweight 30 --searchdepth 2 --fname "data/10" --ct 16

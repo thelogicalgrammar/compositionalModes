@@ -72,6 +72,8 @@ int main(int argc, char** argv) {
 	size_t cSize 			= 5;
 	double likelihoodWeight = 1;
 	double searchDepth 		= 2;
+	bool pragmatic 			= false;
+	double pTarget 			= 0.5;
 	std::string fname 		= "./data/tradeoff/";
 
 	fleet.add_option<size_t>(
@@ -94,6 +96,16 @@ int main(int argc, char** argv) {
 		searchDepth,
 		"Maximum depth of signals when enumerating utterances to estimate communicative accuracy"
 	);
+	fleet.add_option<bool>(
+		"--pragmatic",
+		pragmatic,
+		"Whether to use pragmatic reasoning in the communicative accuracy computation"
+	);
+	fleet.add_option<double>(
+		"--ptarget",
+		pTarget,
+		"Probability of each object being a target"
+	);
 	fleet.add_option<std::string>(
 		"--fname",
 		fname,
@@ -110,7 +122,7 @@ int main(int argc, char** argv) {
     std::mt19937 rng(rd());
 
 	// Decide what simulation to run
-	/* SimulationType simulationType = SimulationType::TESTCOMMUNICATION; */
+	// SimulationType simulationType = SimulationType::TESTCOMMUNICATION;
 	/* SimulationType simulationType = SimulationType::TESTGRAMMAR; */
 	SimulationType simulationType = SimulationType::TRADEOFF;
 	/* SimulationType simulationType = SimulationType::DEBUG; */
@@ -149,30 +161,32 @@ int main(int argc, char** argv) {
 			/* 	nObs, */
 			/* 	cSize, */
 			/* 	likelihoodWeight, */
+			/*	pTarget, */
 			/* 	rng, */
 			/* 	"./data/exactlyOneThing.txt" */
 			/* ); */
 
-			// λx.( ( X.Q X.L ) ( setminus X.L X.R ) ) 
-			// ( intGt 0 1 ) 
-			// ( intGt 1 0 ) 
-			// "All L is R"
-			// ( intEq ( cardinality X.R X.c ) 0 )
-			std::string x2 = 
-				"1:%s | %s | %s | %s;3:( %s %s );7:( %s %s );6:%s.Q;0:X;4:%s.L;0:X;4:( setminus %s %s );4:%s.L;0:X;4:%s.R;0:X;"
-				"8:( intGt %s %s );10:0;10:1;"
-				"8:( intGt %s %s );10:1;10:0;"
-				"8:( intEq %s %s );10:( cardinality %s %s );9:%s.R;0:X;2:%s.c;0:X;10:0";
+			/* // λx.( ( X.Q X.L ) ( setminus X.L X.R ) ) */ 
+			/* // ( intGt 0 1 ) */ 
+			/* // ( intGt 1 0 ) */ 
+			/* // "All L is R" */
+			/* // ( intEq ( cardinality X.R X.c ) 0 ) */
+			/* std::string x2 = */ 
+			/* 	"1:%s | %s | %s | %s;3:( %s %s );7:( %s %s );6:%s.Q;0:X;4:%s.L;0:X;4:( setminus %s %s );4:%s.L;0:X;4:%s.R;0:X;" */
+			/* 	"8:( intGt %s %s );10:0;10:1;" */
+			/* 	"8:( intGt %s %s );10:1;10:0;" */
+			/* 	"8:( intEq %s %s );10:( cardinality %s %s );9:%s.R;0:X;2:%s.c;0:X;10:0"; */
 
-			estimateCommAcc<QuantsHypothesis>(
-				x2,
-				nObs,
-				cSize,
-				likelihoodWeight,
-				rng,
-				"./data/all.txt"
-			);
-			
+			/* estimateCommAcc<QuantsHypothesis>( */
+			/* 	x2, */
+			/* 	nObs, */
+			/* 	cSize, */
+			/* 	likelihoodWeight, */
+			/*	pTarget, */
+			/* 	rng, */
+			/* 	"./data/all.txt" */
+			/* ); */
+
 			/* // λx.( ( X.Q ( intersection X.L X.R ) ) X.R ) */ 
 			/* // "No R is L" */
 			/* // ( intEq ( cardinality X.L X.c ) 0 ) */
@@ -189,6 +203,7 @@ int main(int argc, char** argv) {
 			/* 	nObs, */
 			/* 	cSize, */
 			/* 	likelihoodWeight, */
+			/*	pTarget, */
 			/* 	rng, */
 			/* 	"./data/no.txt" */
 			/* ); */
@@ -209,6 +224,7 @@ int main(int argc, char** argv) {
 			/* 	nObs, */
 			/* 	cSize, */
 			/* 	likelihoodWeight, */
+			/*  pTarget, */
 			/* 	rng, */
 			/* 	"./data/someNotAll.txt" */
 			/* ); */
@@ -229,6 +245,7 @@ int main(int argc, char** argv) {
 			/* 	nObs, */
 			/* 	cSize, */
 			/* 	likelihoodWeight, */
+			/*  pTarget, */
 			/* 	rng, */
 			/* 	"./data/some.txt" */
 			/* ); */
@@ -250,6 +267,7 @@ int main(int argc, char** argv) {
 			/* 	nObs, */
 			/* 	cSize, */
 			/* 	likelihoodWeight, */
+			/*  pTarget, */
 			/* 	rng, */
 			/* 	"./data/no_some.txt" */
 			/* ); */
@@ -272,6 +290,7 @@ int main(int argc, char** argv) {
 			/* 	nObs, */
 			/* 	cSize, */
 			/* 	likelihoodWeight, */
+			/*	pTarget, */
 			/* 	rng, */
 			/* 	"./data/no_all_some.txt" */
 			/* ); */
@@ -293,8 +312,56 @@ int main(int argc, char** argv) {
 				nObs,
 				cSize,
 				likelihoodWeight,
+				pTarget,
 				rng,
-				"./data/all_someNotAll.txt"
+				"./data/all_someNotAll.txt",
+				searchDepth,
+				pragmatic
+			);
+
+			// ( ( X.Q X.L ) ( setminus X.R X.L ) )  
+			// ( intEq 1 1 ) 
+			// ( intEq ( cardinality X.R X.c ) ( cardinality X.L X.c ) ) 
+			// ( intEq 1 0 )
+			std::string x9 = 
+				"1:%s | %s | %s | %s;3:( %s %s );7:( %s %s );6:%s.Q;0:X;4:%s.L;0:X;4:( setminus %s %s );4:%s.R;0:X;4:%s.L;0:X;"
+				"8:( intEq %s %s );10:1;10:1;"
+				"8:( intEq %s %s );10:( cardinality %s %s );9:%s.R;0:X;2:%s.c;0:X;10:( cardinality %s %s );9:%s.L;0:X;2:%s.c;0:X;"
+				"8:( intEq %s %s );10:1;10:0";
+
+			estimateCommAcc<QuantsHypothesis>(
+				x9,
+				nObs,
+				cSize,
+				likelihoodWeight,
+				pTarget,
+				rng,
+				"./data/paretoSimple.txt",
+				searchDepth,
+				pragmatic
+			);
+
+			// ( ( X.Q X.R ) ( setminus X.L X.R ) ) 
+			// ( intEq ( cardinality X.L X.c ) ( cardinality X.R X.c ) ) 
+			// ( intEq ( cardinality X.R X.c ) 0 ) 
+			// ( intEq 0 1 )
+
+			std::string x10 = 
+				"1:%s | %s | %s | %s;3:( %s %s );7:( %s %s );6:%s.Q;0:X;4:%s.R;0:X;4:( setminus %s %s );4:%s.L;0:X;4:%s.R;0:X;"
+				"8:( intEq %s %s );10:( cardinality %s %s );9:%s.L;0:X;2:%s.c;0:X;10:( cardinality %s %s );9:%s.R;0:X;2:%s.c;0:X;"
+				"8:( intEq %s %s );10:( cardinality %s %s );9:%s.R;0:X;2:%s.c;0:X;10:0;"
+				"8:( intEq %s %s );10:0;10:1";
+
+			estimateCommAcc<QuantsHypothesis>(
+				x10,
+				nObs,
+				cSize,
+				likelihoodWeight,
+				pTarget,
+				rng,
+				"./data/paretoComplex.txt",
+				searchDepth,
+				pragmatic
 			);
 
 			break;
@@ -317,7 +384,7 @@ int main(int argc, char** argv) {
 			);
 
 			auto data = agent.produceDataFromEnumeration(
-				generateContexts(cSize, nObs, rng),
+				generateContexts(cSize, nObs, rng, pTarget),
 				rng
 			);
 
@@ -351,6 +418,7 @@ int main(int argc, char** argv) {
 			j["csize"] = cSize;
 			j["likelihoodweight"] = likelihoodWeight;
 			j["searchdepth"] = searchDepth;
+			j["pragmatic"] = pragmatic;
 			j["steps"] = FleetArgs::steps;
 			jfile << j.dump() << std::endl;
 
@@ -371,6 +439,8 @@ int main(int argc, char** argv) {
 					rng,
 					// search depth
 					searchDepth,
+					pTarget,
+					pragmatic,
 					datafilepath,
 					hypfilepath
 				);

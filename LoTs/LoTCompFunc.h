@@ -26,6 +26,8 @@ template <> struct accepts_arg< t_TC_M, t_t_M> :  std::true_type {};
 template <> struct accepts_arg< t_IV_M, t_e_M> :  std::true_type {};
 template <> struct accepts_arg< t_DP_M, t_IV_M>:  std::true_type {};
 template <> struct accepts_arg< t_TV_M, t_e_M> :  std::true_type {};
+template <> struct accepts_arg< t_PM_M, t_IV_M>:  std::true_type {};
+template <> struct accepts_arg< t_PMM_M, t_IV_M>: std::true_type {};
 template <> struct accepts_arg< t_Q_M,  t_IV_M>:  std::true_type {};
 // this is a helper variable template
 template <typename T, typename U>
@@ -53,6 +55,8 @@ inline constexpr bool accepts_arg_v = accepts_arg<T, U>::value;
 /* template <> struct can_compose< t_TC_M, t_IV_M> :  std::true_type {}; */
 /* template <> struct can_compose< t_TC_M, t_DP_M> :  std::true_type {}; */
 /* template <> struct can_compose< t_DP_M, t_TV_M> :  std::true_type {}; */
+/* template <> struct can_compose< t_PM_M, t_IV_M> :  std::true_type {}; */
+/* template <> struct can_compose< t_PMM_M, t_IV_M> :  std::true_type {}; */
 /* template <> struct can_compose< t_Q_M, t_TV_M > :  std::true_type {}; */
 /* template <typename T, typename U> */
 /* inline constexpr bool can_compose_v = can_compose<T, U>::value; */
@@ -125,6 +129,8 @@ namespace COMP_DSL{
 	auto is_IV_M = is_T<t_IV_M>;
 	auto is_DP_M = is_T<t_DP_M>;
 	auto is_TV_M = is_T<t_TV_M>;
+	auto is_PM_M = is_T<t_PM_M>;
+	auto is_PMM_M = is_T<t_PMM_M>;
 	auto is_Q_M  = is_T<t_Q_M>;
 
 	// If the first bit doesn't compose, go to the second

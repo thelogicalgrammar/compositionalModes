@@ -1,4 +1,5 @@
 # pragma once
+#include <limits>
 
 using t_BTC_vec = std::vector<std::unique_ptr<BTC>>;
 // unnormalized distribution values
@@ -6,6 +7,10 @@ using t_BTC_dist = std::tuple<
 		t_BTC_vec,
 		std::vector<double>
 	>;
+	
+using t_row        = std::vector<bool>;
+using t_truthTable = std::vector<t_row>; 
+
 enum productionMode { SAMPLE, ARGMAX };
 
 // Context variations are contexts
@@ -61,6 +66,103 @@ std::vector<std::pair<T, int>> countUniqueElements(const std::vector<T>& input) 
     return uniqueElements;
 }
 
+// Computes the truth table for a set of meanings
+// and a set of possible contexts
+// Returns a vector of vectors of bools
+// where each inner vector is the truth values
+// for a given meaning over all contexts
+std::vector<std::vector<bool>> computeTruthTable(
+		const std::vector<t_t_M>& meanings,
+		const t_contextVector& possibleContexts
+	) {
+		// Calculates the truth table with shape (nMeanings, nContexts)
+		// NOTE: this could be made more efficient by using a dynamic bitset
+		// but then it'll also be less readable
+		std::vector<std::vector<bool>> truths;
+		for (auto& meaning : meanings) {
+			std::vector<bool> signalTruths;
+			for (auto& context : possibleContexts) {
+				try {
+					signalTruths.push_back(meaning(context));
+				} catch (PresuppositionFailure& e) {
+					// if the meaning fails to compute
+					// it means that the context is not
+					// compatible with the meaning
+					// so we just ignore it
+					// and it doesn't increase nTrue
+					continue;
+				}
+			}
+			truths.push_back(signalTruths);
+		}
+		return truths;
+	}
+
+
+// strict subset test  (beta ⊂ alpha  ?)
+inline bool proper_subset(const t_row& beta, const t_row& alpha)
+{
+    const std::size_t n = beta.size();
+	// at least one element less
+    bool strict = false;                      
+    for (std::size_t w = 0; w < n; ++w) {
+		// beta outside alpha ⇒ not subset
+        if (beta[w] && !alpha[w])   return false;   
+		// alpha strictly larger here
+        if (!beta[w] && alpha[w])   strict = true;  
+    }
+    return strict;
+}
+
+inline std::pair<std::size_t,bool>
+enriched_cardinality_EBE(
+		std::size_t u,
+		const t_truthTable& tt,
+		std::size_t C
+	){
+		// This function computes the enriched cardinality
+		// of an utterance u in a truth table tt
+		// and a context C
+		// It returns a pair with the cardinality
+		// and a boolean indicating whether the context
+		// is contained in the utterance
+
+		const std::size_t nU = tt.size();
+		const std::size_t nW = tt.front().size();
+
+		// short‑circuit: if utterance false in C it can never be chosen
+		if (!tt[u][C]) return {nW+1, false};
+
+		// number of worlds in which the utterance is true
+		// after enrichment
+		std::size_t card = 0;
+		// whether the context is contained in the utterance
+		bool containsC   = true;
+
+		// loop over possible contexts
+		for (std::size_t w = 0; w < nW; ++w) {
+			// world not in utterance anyway
+			if (!tt[u][w]) continue;              
+
+			bool excluded = false;
+			// loop over other utterances
+			for (std::size_t v = 0; v < nU && !excluded; ++v) {
+				if (v == u) continue;
+				if (proper_subset(tt[v], tt[u]) && tt[v][w])
+					// ruled out because it's a stronger utterance
+					excluded = true;              
+			}
+
+			if (!excluded) {
+				// survives exhaustification
+				++card;                           
+			} else if (w == C) {
+				// actual world got excluded
+				containsC = false;                
+			}
+		}
+		return {containsC ? card : nW+1, containsC};
+	}
 
 // We assume Hyp defines the following on top of the usual stuff:
 // - getLexicalMeanings : returns a map containing learned meanings
@@ -92,35 +194,6 @@ private:
 		// The complexity of the tree is just
 		// the number of terminal nodes
 		return double(sentence.size());
-	}
-
-	double computeInformativity(
-			t_context observedC,
-			t_t_M meaning
-		) const{
-		// Since the listener can see the world
-		// except for the target feature,
-		// the possible contexts are the ones that differ
-		// from the observed one wrt what's a target.
-		// Therefore, I loop through the possible contexts
-		t_contextVector possibleContexts = 
-			generateContextVariations(observedC);
-		int nTrue = 0;
-		for (t_context c : possibleContexts) {
-			try {
-				nTrue = nTrue + meaning(c);
-			} catch (PresuppositionFailure& e) {
-				// if the meaning fails to compute
-				// it means that the context is not
-				// compatible with the meaning
-				// so we just ignore it
-				// and it doesn't increase nTrue
-				continue;
-			}
-		}
-		// compute surprisal of true state given the meaning
-		// same informativity measure as RSA!
-		return -std::log((double)nTrue);
 	}
 
 	// Generates a random tree
@@ -280,7 +353,7 @@ public:
 		sizeScaling = 0.0;
 		// initialize the number of sampled random utterances
 		// to pick one to refer to the state
-		// *Onliy used in the case of sampling*
+		// *Only used in the case of sampling*
 		nSamples = 5000;
 	}
 
@@ -290,96 +363,17 @@ public:
 
 	Agent( std::string parseable ) : Agent(Hyp(parseable)) {}
 
-	// The agent sees a world of objects
-	// They have to produce a signal that 
+	// The agent sees a series of contexts.
+	// They have to produce for each context a signal that 
 	// helps the listener identify the targets.
-	// Return encodes (an approximation of)
-	// the utility of producing
-	// each sentence in the given context
-	std::optional<t_BTC_dist> produce(
-			t_context c, 
-			t_BTC_compose compositionFn,
-			LexicalSemantics& lex,
-			t_terminalsMap& terminalsMap,
-			std::mt19937& rng,
-			t_BTC_vec& sentences
-		) const {
-
-		if (sentences.size() == 0) {
-			// If the composition function cannot produce 
-			// sentences that are true of the context
-			// (e.g., randomly initialized composition function)
-			return std::nullopt;
-		} else {
-
-			// Calculates the utility of each sentence
-			std::vector<double> utilities;
-			for (auto& s : sentences) {
-
-				t_t_M meaning = std::get<t_t_M>(s->compose(compositionFn));
-
-				// compute informativity
-				double info = this->computeInformativity(c, meaning);
-				
-				/* std::cout << "Sentence: " << s->toSExpression() << " "; */
-				/* std::cout << "Info: " << info << std::endl; */
-
-				// compute complexity (multiply by sizeScaling
-				// to make more comparable with info);
-				double complexity = 
-					this->computeComplexity(*s) * this->sizeScaling;
-
-				double utility = this->alpha*(info - complexity);
-
-				/* s->printTree(lex); */
-				/* std::cout << "info: " << info << std::endl; */
-				/* std::cout << "comp: " << complexity << std::endl; */
-				/* std::cout << utility << std::endl; */
-				/* std::cout << std::endl; */
-
-				// Since this ends up as parameter to a 
-				// discrete distribution that automatically normalizes, 
-				// we don't need to normalize here
-				utilities.push_back(utility);
-			}
-
-			return std::make_tuple(std::move(sentences), utilities);
-
-		}
-	}
-
-	std::optional<t_BTC_dist> produce(
-			Hyp trueHyp,
-			t_context c, 
-			std::mt19937& rng
-		) const {
-
-		// get everything from the trueHyp
-		LexicalSemantics lex 		= trueHyp.getLexicon();
-		t_terminalsMap terminalsMap = this->generateTerminalsMap(lex);
-		t_BTC_compose compositionFn = trueHyp.getCompositionF();
-		return produce(c, compositionFn, lex, terminalsMap, rng);
-	}
-
-	std::optional<t_BTC_dist> produce(
-			t_context c, 
-			std::mt19937& rng
-		) const {
-
-		// Use the chosen hypothesis by default
-		return produce(
-			this->getHypothesis(),
-			c,
-			rng
-		);
-	}
-
-	// Returns the produced sentences and their utility
+	// Returns the utility of each produced sentence.
+	// Returns a tuple with the produced sentences and their utilities
 	t_sentences_utilities produceDataFromEnumeration(
-			std::vector<t_context> cs, 
+			const std::vector<t_context> cs, 
 			std::mt19937& rng,
-			size_t searchDepth = 2,
-			productionMode mode = productionMode::ARGMAX
+			const size_t searchDepth = 2,
+			const bool pragmatic = false,
+			const productionMode mode = productionMode::ARGMAX
 		) const {
 
 		auto trueHyp = this->getHypothesis();
@@ -398,79 +392,228 @@ public:
 				searchDepth
 			);
 
+		// print lexicon using the getNames function
+		// std::cout << "Lexicon: " << std::endl;
+		// for (auto& word : lex.getNames()) {
+		// 	std::cout << word << std::endl;
+		// }
+
+		// print sentences
+		// std::cout << "All sentences: " << std::endl;
+		// for (auto& s : allSentences) {
+		// 	std::cout << s->toSExpression() << std::endl;
+		// }
+
 		// store the produced sentences
 		typename Hyp::data_t producedSentences;
 		// utility of each produced sentence
 		std::vector<double> utilities;
-		// loop over contexts
+		
+		// loop over contexts and produce a sentence for each
 		for (auto& context : cs) {
 
-			// select the true sentences in context
-			t_BTC_vec trueSentences = selectTrueSentences(
-					context,
-					compositionFn,
-					copyBTCVec(allSentences)
+			// Since the listener can see the world
+			// except for the target feature,
+			// the possible contexts are the ones that differ
+			// from the observed one wrt what's a target.
+			t_contextVector possibleContexts = generateContextVariations(context);
+
+			// compute the utility of each sentence
+			// for the specific context
+			std::vector<double> contextUtilities;
+
+			// The sentences over which the production distribution
+			// is defined
+			t_BTC_vec sentences;
+
+			if (pragmatic) {
+
+				// Get meanings for all true sentences
+				std::vector<t_t_M> allMeanings;
+				for (auto& s : allSentences) {
+					allMeanings.push_back(std::get<t_t_M>(s->compose(compositionFn)));
+				}
+
+				// Compute truth table for all true sentences across all context variations
+				// shape: (nSentences, nContexts)
+				std::vector<std::vector<bool>> truthTable = computeTruthTable(
+					allMeanings,
+					possibleContexts
 				);
+
+				// find the index of the actual world in the possible contexts
+				std::size_t C = 0;
+				for (std::size_t i = 0; i < possibleContexts.size(); ++i) {
+					if (possibleContexts[i] == context) {
+						C = i;
+						break;
+					}
+				}
 			
-			// Define a (maybe) distribution over sentences
-			// (it's empty if there are no true sentences)
-			// NOTE: this moves 'sentences' so it is no longer usable here
-			std::optional<t_BTC_dist> sentencesDist = produce(
-					context,
-					compositionFn,
-					lex,
-					terminalsMap,
-					rng,
-					trueSentences
+				// // For debugging purposes to check if pragmatic mode is working
+				// // manually specified truth table and context index
+				// // context index is 0
+				// C = 1;
+				// // shape: (nSentences, nContexts)
+				// std::vector<std::vector<bool>> truthTable = {
+				// 	{1, 1},
+				// 	{1, 0},
+				// 	{0, 1},
+				// };
+
+				// number of utterances
+				const std::size_t nU = truthTable.size();
+
+				// loop over utterances and compute the enriched cardinality
+				for (std::size_t u = 0; u < nU; ++u) {
+					const auto [k, keepsC] = enriched_cardinality_EBE(u, truthTable, C);
+
+					// std::cout << "Utterance: " << u << std::endl;
+					// std::cout << "Enriched cardinality: " << k << std::endl;
+					// std::cout << "Keeps context: " << keepsC << std::endl;
+					// std::cout << "Utility: " << -std::log((double)k) << std::endl;
+					// std::cout << std::endl;
+
+					// add the utility to the context utilities
+					if (keepsC) {
+						contextUtilities.push_back(-std::log((double)k));
+					} else {
+						// if the utterance is not true in the context,
+						// it has utility -infinity
+						contextUtilities.push_back(-std::numeric_limits<double>::infinity());
+					}
+				}
+				
+				// For the RSA setup, we consider all sentences
+				// and the false ones have utility 0
+				sentences = copyBTCVec(allSentences);
+
+			} else {
+
+				// Since the prior over worlds is uniform,
+				// and the messages all have equal cost,
+				// this utility is the same as the S1 utility
+				// (i.e., the RSA utility)
+				// up to a constant factor
+
+				// select the true sentences in context
+				// out of all the sentences allSentences
+				// Here we are not considering the false sentences
+				sentences = selectTrueSentences(
+						context,
+						compositionFn,
+						copyBTCVec(allSentences)
+					);
+
+				// print true sentences
+				// std::cout << "True sentences: " << std::endl;
+				// for (auto& s : trueSentences) {
+				// 	std::cout << s->toSExpression() << std::endl;
+				// }
+
+				if (sentences.size() == 0) {
+					// If the composition function cannot produce 
+					// sentences that are true of the context
+					// (e.g., randomly initialized composition function)
+					throw std::runtime_error("No data produced");
+				}
+
+				std::vector<t_t_M> meanings;
+				for (auto& s : sentences) {
+					meanings.push_back(std::get<t_t_M>(s->compose(compositionFn)));
+				}
+
+				std::vector<std::vector<bool>> truths = computeTruthTable(
+					meanings,
+					possibleContexts
 				);
+
+				std::vector<size_t> sizes;
+				// Calculate for each sentence 
+				// the number of contexts in which it is true
+				for (auto& signalT : truths) {
+					size_t nTrue = 0;
+					for (const auto& t : signalT) {
+						try {
+							nTrue = nTrue + t;
+						} catch (PresuppositionFailure& e) {
+							// if the meaning fails to compute
+							// it means that the sentence cannot be used
+							// in that context, so we just ignore it
+							// and it doesn't increase nTrue
+							continue;
+						}
+					}
+					sizes.push_back(nTrue);
+				}
+
+				for (size_t &size : sizes) {
+					
+					// Since we are considering only a sentence
+					// that is true of the context,
+					// size cannot be 0, so we can use log
+					double utility = -std::log((double)size);
+
+					/* std::cout << "Sentence: " << s->toSExpression() << " "; */
+					/* s->printTree(lex); */
+					/* std::cout << "info: " << info << std::endl; */
+					/* std::cout << "comp: " << complexity << std::endl; */
+					/* std::cout << utility << std::endl; */
+					/* std::cout << std::endl; */
+
+					// Since this ends up as parameter to a discrete distribution
+					// that automatically normalizes, we don't need to normalize here
+					contextUtilities.push_back(utility);
+				}
+			}
 
 			// Select a single string from the distribution
 			// either the ARGMAX or SAMPLE based on informativity
-			if (sentencesDist.has_value()) {
-
-				// get the sentences and the distribution
-				const t_BTC_vec& sentences = 
-					std::get<0>(*sentencesDist);
-				const std::vector<double>& weights = 
-					std::get<1>(*sentencesDist);
-
-				int index;
-				if (mode == productionMode::ARGMAX) {
-					auto max_index = std::max_element(
-						weights.begin(),
-						weights.end()
-					);
-					// get the index of the most probable sentence
-					index = std::distance(weights.begin(), max_index);
-				} else if (mode == productionMode::SAMPLE) {
-					// define distribution from the weights
-					t_discr_dist dist = 
-						t_discr_dist(weights.begin(),weights.end());
-					// sample from the distribution
-					index = dist(rng);
-				} else {
-					throw std::runtime_error("Unknown production mode");
-				}
-
-				std::string producedString = sentences[index]->toSExpression();
-				producedSentences.push_back(typename Hyp::datum_t{
-					context, 
-					producedString,
-					1.0
-				});
-				utilities.push_back(weights[index]);
+			// get the sentences and the distribution
+			int index;
+			if (mode == productionMode::ARGMAX) {
+				auto max_index = std::max_element(
+					contextUtilities.begin(),
+					contextUtilities.end()
+				);
+				// get the index of the most probable sentence
+				// if there are multiple sentences with the same utility,
+				// the one with the lowest index is chosen
+				index = std::distance(contextUtilities.begin(), max_index);
+			} else if (mode == productionMode::SAMPLE) {
+				// define distribution from the utilities
+				t_discr_dist dist = t_discr_dist(contextUtilities.begin(),contextUtilities.end());
+				// sample from the distribution
+				index = dist(rng);
 			} else {
-				throw std::runtime_error("No data produced");
+				throw std::runtime_error("Unknown production mode");
 			}
+
+			// the string produced for the context
+			std::string producedString = sentences[index]->toSExpression();
+			// the utility of the produced string
+			double contextUtility = contextUtilities[index];
+
+			producedSentences.push_back(typename Hyp::datum_t{
+				context, 
+				producedString,
+				1.0
+			});
+
+			utilities.push_back(contextUtility);
+
 		}
 
+		// print a quick summary of the utilities
+		// START DEBUG
 		auto vec = countUniqueElements<double>(utilities);
 		std::cout << std::endl;
 		std::cout << "Utilities counts" << std::endl;
 		for (const auto& [loglik, count] : vec) {
 			std::cout << loglik << " : " << count << std::endl;
 		}
-	
+		// END DEBUG
+
 		return std::make_tuple(producedSentences, utilities);
 	}
 
@@ -603,6 +746,8 @@ public:
 			t_IV_M{},
 			t_DP_M{},
 			t_TV_M{},
+			t_PM_M{},
+			t_PMM_M{},
 			t_Q_M{},
 			Empty_M{}
 		};
@@ -623,6 +768,16 @@ public:
 				}
 			}
 		}
+
+		// print the CFG map
+		// std::cout << "CFG map: " << std::endl;
+		// for (auto& [type, tuples] : cfgMap) {
+		// 	std::cout << type << " : ";
+		// 	for (auto& tuple : tuples) {
+		// 		std::cout << "(" << std::get<0>(tuple) << ", " << std::get<1>(tuple) << ") ";
+		// 	}
+		// 	std::cout << std::endl;
+		// }
 
 		return cfgMap;
 	}
@@ -743,6 +898,8 @@ public:
         const t_terminalsMap& terminalsMap
 	) const {
 
+		// std::cout << "Enumerating " << typeName << " at depth " << maxDepth << std::endl;
+
 		std::vector<std::unique_ptr<BTC>> trees;
 
 		// Base case: If maxDepth < 0, no trees can be created
@@ -753,16 +910,25 @@ public:
 		// If typeName exists in the terminalsMap, create leaf nodes
 		auto terminals = terminalsMap.find(typeName);
 		if (terminals != terminalsMap.end()) {
+			// std::cout << "Found " << terminals->second.size() << " terminals for " << typeName << std::endl;
 			for (const auto& terminal : terminals->second) {
 				trees.push_back(std::make_unique<BTC>(
 					lex.at(terminal), terminal
 				));
+				// std::cout << "  Terminal: " << terminal << std::endl;
 			}
 		}
 
 		// If typeName exists in the cfgMap, create non-leaf nodes
 		auto cfgIt = cfgMap.find(typeName);
 		if (cfgIt != cfgMap.end()) {
+
+			// std::cout << "Found " << cfgIt->second.size() << " CFG rules for " << typeName << std::endl;
+
+			// for (const auto& rule : cfgIt->second) {
+			// 	std::cout << "  Rule: " << std::get<0>(rule) << " + " << std::get<1>(rule) << std::endl;
+			// }
+
 			for (const auto& childTypes : cfgIt->second) {
 
 				const std::string& leftType = std::get<0>(childTypes);
@@ -805,7 +971,7 @@ public:
 				t_BTC_compose compositionFn,
 				LexicalSemantics& lex,
 				t_terminalsMap& terminalsMap,
-				size_t searchDepth = 2
+				const size_t searchDepth = 2
 			) const {
 
 		t_BTC_vec sentences;
@@ -867,6 +1033,10 @@ public:
 						// If there is a presupposition failure
 						// return Empty{}
 						return t_extension(Empty{});
+					} catch (std::exception& e) {
+						// Catch any other exceptions and return Empty
+						std::cout << "Exception during meaning evaluation: " << e.what() << std::endl;
+						return t_extension(Empty{});
 					}
 				},
 				result
@@ -876,8 +1046,10 @@ public:
 				std::holds_alternative<t_t>(extension) && 
 				std::get<t_t>(extension)
 			) {
+				// NOTE: after this, utt is no longer valid
 				sentences.push_back(std::move(utt));
 			} 
+
 		}
 		
 		return sentences;

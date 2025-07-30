@@ -29,6 +29,10 @@ std::string meaningTypeToString(const t_meaning& meaning) {
             return "<s,<<e,t>,t>>";
         } else if constexpr (std::is_same_v<T, t_TV_M>) {
             return "<s,<e,<e,t>>>";
+		} else if constexpr (std::is_same_v<T, t_PM_M>) {
+			return "<s,<<e,t>,<e,t>>>";
+		} else if constexpr (std::is_same_v<T, t_PMM_M>) {
+			return "<s,<<e,t>,<<e,t>,<e,t>>>>";
         } else if constexpr (std::is_same_v<T, t_Q_M>) {
             return "<s,<<e,t>,<<e,t>,t>>>";
         } else if constexpr (std::is_same_v<T, Empty_M>) {
@@ -49,31 +53,61 @@ private:
 public:
 
 	LexicalSemantics(
+			const size_t cSize,
 			/* bool add_BCs, */
+			bool add_es,
 			bool add_BFs,
 			bool add_IVs,
 			bool add_TVs,
 			bool add_DPs,
+			bool add_PMs,
+			bool add_PMMs,
 			bool add_Qs
 		) {
+		if (add_es) addEs(cSize);
 		if (add_BFs) addBFs();
 		if (add_IVs) addIVs();
 		if (add_TVs) addTVs();
 		if (add_DPs) addDPs();
+		if (add_PMs) addPMs();
+		if (add_PMMs) addPMMs();
 		if (add_Qs) addQs();
 	}
 
-	LexicalSemantics() {
+	LexicalSemantics(size_t cSize=5) {
+		addEs(cSize);
 		addBFs();
 		addIVs();
 		addTVs();
 		addDPs();
+		addPMs();
+		addPMMs();
 		addQs();
 	}
 
-
+	// Add a word to the lexicon
+	// with its meaning
 	void add(std::string name, t_meaning m) {
 		interpretation_f[name] = m;
+	}
+
+	void addEs(size_t cSize) {
+
+		// for each element in the context,
+		// add a function that returns the element
+		// Effectively a proper name for each element (e.g., a deictic)
+		for (size_t i = 0; i < cSize; i++) {
+			add(
+				std::to_string(i) + "_e",
+				[i](t_context c) -> t_e {
+					// return the i-th element of the context
+					// Use runtime indexing instead of compile-time std::get
+					auto it = c.begin();
+					std::advance(it, i);
+					return *it;
+				}
+			);
+		}
 	}
 
 	// Add Boolean constants "true" and "false"
@@ -153,25 +187,37 @@ public:
 
 	}
 
+	// These are type <s, <e, t>>
 	void addIVs() {
 
-		add( "positive",
+		// This matches every object in the domain.
+		// It can used e.g., in combination with a quantifier
+		// like "every" to mean "everything"
+		add( "thing", 
 			[](t_context c) -> t_IV {
 				return [](t_e x) -> t_t {
-					int o = std::get<0>(x);
-					return o > 0;
-				};
-			}
-	   	);
-
-		add( "negative",
-			[](t_context c) -> t_IV {
-				return [](t_e x) -> t_t {
-					int o = std::get<0>(x);
-					return o < 0;
+					return true;
 				};
 			}
 		);
+
+		// add( "positive",
+		// 	[](t_context c) -> t_IV {
+		// 		return [](t_e x) -> t_t {
+		// 			int o = std::get<0>(x);
+		// 			return o > 0;
+		// 		};
+		// 	}
+	   	// );
+
+		// add( "negative",
+		// 	[](t_context c) -> t_IV {
+		// 		return [](t_e x) -> t_t {
+		// 			int o = std::get<0>(x);
+		// 			return o < 0;
+		// 		};
+		// 	}
+		// );
 
 		add( "even",
 			[](t_context c) -> t_IV {
@@ -217,19 +263,20 @@ public:
 		
 		// add (common) names for the numbers 0 to 5 (inclusive)
 		// Define them as IVs so they can be used e.g., by the quantifiers
-		for (int i = 0; i < 6; i++) {
-			add(
-				std::to_string(i),
-				[i](t_context c) -> t_IV {
-					return [i](t_e x) -> t_t {
-						return std::get<0>(x) == i;
-					};
-				}
-			);
-		}
+		// for (int i = 0; i < 6; i++) {
+		// 	add(
+		// 		std::to_string(i),
+		// 		[i](t_context c) -> t_IV {
+		// 			return [i](t_e x) -> t_t {
+		// 				return std::get<0>(x) == i;
+		// 			};
+		// 		}
+		// 	);
+		// }
 
 	}
 
+	// These are type <s <e, <e, t>>>
 	void addTVs() {
 		
 		// NOTE: At the moment these are never used because there are no
@@ -251,9 +298,7 @@ public:
 			}
 		);
 
-		// two properties are equal
-		// with respect to their content
-		// (ignores target status)
+		// two entities are equal with respect to their content
 		add( "equal",
 			[](t_context c) -> t_TV {
 				return [](t_e y) -> t_IV {
@@ -266,20 +311,24 @@ public:
 			}
 		);
 
-		add( "divides",
-			[](t_context c) -> t_TV {
-				return [](t_e y) -> t_IV {
-					int o1 = std::get<0>(y);
-					return [o1](t_e x) -> t_t {
-						int o2 = std::get<0>(x);
-						return o2 % o1 == 0;
-					};
-				};
-			}
-		);
+		// add( "divides",
+		// 	[](t_context c) -> t_TV {
+		// 		return [](t_e y) -> t_IV {
+		// 			// get the content of the object
+		// 			int o1 = std::get<0>(y);
+		// 			return [o1](t_e x) -> t_t {
+		// 				// this presupposes that the number is non-zero
+		// 				if (o1 == 0){throw PresuppositionFailure();}
+		// 				int o2 = std::get<0>(x);
+		// 				return o2 % o1 == 0;
+		// 			};
+		// 		};
+		// 	}
+		// );
 		
 	}
 
+	// These are type <s, <<e, t>, t>>
 	void addDPs() {
 		
 		add( "something",
@@ -307,8 +356,83 @@ public:
 			}
 		);
 
+		add("nothing",
+			[](t_context c) -> t_DP {
+				return [c](t_IV x) -> t_t {
+					// loop over the domain
+					for (auto obj : c) {
+						if (x(obj)) return false;
+					}
+					return true;
+				};
+			}
+		);
+
+		/* for (int i = 0; i < 5; i++) { */
+		/* 	add( */ 
+		/* 		"exactly_" + std::to_string(i), */
+		/* 		[i](t_context c) -> t_DP { */
+		/* 			return [c,i](t_IV x) -> t_t { */
+		/* 				int count = 0; */
+		/* 				// loop over the domain */
+		/* 				for (auto obj : c) { */
+		/* 					if (x(obj)) count++; */
+		/* 				} */
+		/* 				return count == i; */
+		/* 			}; */
+		/* 		} */
+		/* 	); */
+		/* } */
+
+	}
+
+	void addPMs() {
+
+		add( "notP",
+			[](t_context c) -> t_PM {
+				return [](t_IV x) -> t_IV {
+					return [x](t_e e) -> t_t {
+						return !x(e);
+					};
+				};
+			}
+		);
+
+	}
+
+	void addPMMs() {
+
+		add( "andP",
+			[](t_context c) -> t_PMM {
+				return [c](t_IV x) -> t_PM {
+					// Return this modified predicate
+					return [x,c](t_IV y) -> t_IV {
+						// returns true if both xs are true
+						return [x,y](t_e z) -> t_t {
+							// returns true if both xs are true
+							return x(z) && y(z);
+						};
+					};
+				};
+			}
+		);
+
+		add( "orP",
+			[](t_context c) -> t_PMM {
+				return [c](t_IV x) -> t_PM {
+					return [x,c](t_IV y) -> t_IV {
+						// returns true if either x or y is true
+						return [x,y](t_e z) -> t_t {
+							return x(z) || y(z);
+						};
+					};
+				};
+			}
+		);
+
 	}
 	
+	// These are type <s, <<e, t>, <<e, t>, t>>>
 	void addQs() {
 		
 		add( "every",

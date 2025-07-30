@@ -8,7 +8,7 @@
 t_context generateContext(
 		size_t size,
 		std::mt19937& rng,
-		float p_target = 0.5
+		float pTarget
 	){
 
 	t_context context;
@@ -18,7 +18,7 @@ t_context generateContext(
 	while (context.size() < size) {
 		// Define the integer component of the element
 		int i = dist(rng);
-		bool target = std::bernoulli_distribution(p_target)(rng);
+		bool target = std::bernoulli_distribution(pTarget)(rng);
 		if (ints.find(i) == ints.end()) {
 			ints.insert(i);
 			context.insert(std::make_tuple(
@@ -36,12 +36,12 @@ std::vector<t_context> generateContexts(
 		// number of contexts to generate
 		size_t num,
 		std::mt19937& rng,
-		float p_target = 0.5
+		float pTarget
 	){
 
 	std::vector<t_context> contexts;
 	for (size_t i = 0; i < num; ++i) {
-		contexts.push_back(generateContext(size, rng, p_target));
+		contexts.push_back(generateContext(size, rng, pTarget));
 	}
 	return contexts;
 }
