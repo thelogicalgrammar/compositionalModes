@@ -16,7 +16,7 @@ module load parallel/20220722-GCCcore-11.3.0
 cd ../../
 make 
 
-DEFAULTLIK = 40
+DEFAULTLIK=40
 # optional argument for likeweights
 ARG1=${1:-$DEFAULTLIK}
 
