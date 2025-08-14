@@ -410,7 +410,7 @@ int main(int argc, char** argv) {
 			std::filesystem::path jpath = dir / (
 				"data_likweight_" + std::to_string(likelihoodWeight) 
 				+ "_nobs_" + std::to_string(nObs) 
-				+ "parameters.json"
+				+ "_parameters.json"
 			);
 			std::ofstream jfile(jpath);
 			nlohmann::json j;

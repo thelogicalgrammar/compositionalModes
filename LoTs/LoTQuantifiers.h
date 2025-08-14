@@ -98,6 +98,7 @@ using t_grammar_input = std::tuple<
 	t_IV_w,
 	t_IV_w
 >;
+
 // Type of output of the Grammar sentences
 using t_grammar_output = std::tuple<
 	// the meaning of the node [[Q IV] IV]
@@ -394,6 +395,8 @@ public:
 
 		using namespace Quants_DSL;
 
+		// Technically for Fleet the string with the pipes
+		// is only esthetic, but it matters for the analysis pipeline!
 		add("%s | %s | %s | %s"		, makeGrammarOutput);
 
 		// NOTE: The weights need to be calibrated so that 
