@@ -414,12 +414,13 @@ int main(int argc, char** argv) {
 			);
 			std::ofstream jfile(jpath);
 			nlohmann::json j;
-			j["nobs"] = nObs;
-			j["csize"] = cSize;
-			j["likelihoodweight"] = likelihoodWeight;
-			j["searchdepth"] = searchDepth;
-			j["pragmatic"] = pragmatic;
-			j["steps"] = FleetArgs::steps;
+			j["nobs"] 				= nObs;
+			j["csize"] 				= cSize;
+			j["likelihoodweight"] 	= likelihoodWeight;
+			j["searchdepth"] 		= searchDepth;
+			j["pragmatic"] 			= pragmatic;
+			j["steps"] 				= FleetArgs::steps;
+			j["num_quants"] 		= NUM_QUANTS;
 			jfile << j.dump() << std::endl;
 
 			std::filesystem::path datafilepath = dir / "data.txt";

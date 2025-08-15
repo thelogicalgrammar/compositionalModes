@@ -1,5 +1,11 @@
 # pragma once
 
+#ifndef NUM_QUANTS
+#define NUM_QUANTS 3   // override with: -DNUM_QUANTS=4 (etc.)
+#endif
+
+static constexpr size_t num_quants = NUM_QUANTS;
+
 // Here I extent the typing system of H&K slightly
 // to include integers as a basic type
 // to match the definitions in Van de Pol et al 2023.
@@ -104,11 +110,10 @@ using t_grammar_output = std::tuple<
 	// the meaning of the node [[Q IV] IV]
 	// as a function of the input meanings
 	t_t,
-	// the output of the three quantifiers in the language
+	// the output of the quantifiers in the language
 	// given the inputs above
-	t_t_w, 
-	t_t_w, 
-	t_t_w
+	// this is a thunk so it's not evaluated until the grammar is called
+	std::vector<std::function<t_t_w()>>
 >;
 
 template<class... Ts>
@@ -131,16 +136,37 @@ inline constexpr bool accepts_arg_v = accepts_arg<T, U>::value;
 
 namespace Quants_DSL{
 
-	// function to glue together the components
-	// of each sentence produced by the grammar
-	t_grammar_output makeGrammarOutput(
-		t_t   tQ,
-		t_t_w t1,
-		t_t_w t2,
-		t_t_w t3
-	) {
-		return std::make_tuple(tQ,t1,t2,t3);
+	template <typename... Qs>
+	static inline t_grammar_output makeGrammarOutput_thunked(t_t tQ, Qs... qs) {
+		static_assert((std::is_same_v<Qs, t_t_w> && ...),
+					"All quantifiers must be t_t_w");
+		std::vector<std::function<t_t_w()>> thunks;
+		thunks.reserve(sizeof...(qs));
+		(thunks.emplace_back([q = qs]{ return q; }), ...);
+		return std::make_tuple(tQ, std::move(thunks));
 	}
+
+	// Your fixed-arity entry point used by add(...)
+	// (one overload per NUM_QUANTS you support)
+	#if   NUM_QUANTS == 1
+	static inline t_grammar_output makeGrammarOutput_fixed(t_t tQ, t_t_w q1) {
+		return makeGrammarOutput_thunked(tQ, q1);
+	}
+	#elif NUM_QUANTS == 2
+	static inline t_grammar_output makeGrammarOutput_fixed(t_t tQ, t_t_w q1, t_t_w q2) {
+		return makeGrammarOutput_thunked(tQ, q1, q2);
+	}
+	#elif NUM_QUANTS == 3
+	static inline t_grammar_output makeGrammarOutput_fixed(t_t tQ, t_t_w q1, t_t_w q2, t_t_w q3) {
+		return makeGrammarOutput_thunked(tQ, q1, q2, q3);
+	}
+	#elif NUM_QUANTS == 4
+	static inline t_grammar_output makeGrammarOutput_fixed(t_t tQ, t_t_w q1, t_t_w q2, t_t_w q3, t_t_w q4) {
+		return makeGrammarOutput_thunked(tQ, q1, q2, q3, q4);
+	}
+	#else
+	#error "Add another makeGrammarOutput_fixed overload for this NUM_QUANTS"
+	#endif
 
 	template < typename tIV >
 	auto union_ = 
@@ -397,7 +423,21 @@ public:
 
 		// Technically for Fleet the string with the pipes
 		// is only esthetic, but it matters for the analysis pipeline!
-		add("%s | %s | %s | %s"		, makeGrammarOutput);
+		// separated by |
+		// start with the composition function
+		#if NUM_QUANTS == 1
+		add("%s | %s",                makeGrammarOutput_fixed);
+		#elif NUM_QUANTS == 2
+		add("%s | %s | %s",           makeGrammarOutput_fixed);
+		#elif NUM_QUANTS == 3
+		add("%s | %s | %s | %s",      makeGrammarOutput_fixed);
+		#elif NUM_QUANTS == 4
+		add("%s | %s | %s | %s | %s", makeGrammarOutput_fixed);
+		#elif NUM_QUANTS == 5
+		add("%s | %s | %s | %s | %s | %s", makeGrammarOutput_fixed);
+		#else
+		#error "Add another rule string for this NUM_QUANTS"
+		#endif
 
 		// NOTE: The weights need to be calibrated so that 
 		// sampled sentences have a reasonable length.
@@ -407,7 +447,6 @@ public:
 		// so that they are specified differently for the two
 		// components of the hypothesis (composition function and quantifiers).
 		// The first parts e.g., uses t_IV, while the second parts use t_IV_w.
-		//
 
 		// PART I
 		// The concepts to define the bit of the composition function
@@ -668,6 +707,8 @@ public:
 							[this,f,arg](t_context c) -> t_DP {
 								t_DP dp = [this,f,arg,c](t_IV iv) -> t_t{
 									try {
+										t_IV_w standinL{ [](t_e){ return true; } };
+										t_IV_w standinR{ [](t_e){ return true; } };
 										// call the relevant hypothesis
 										auto x = call(std::make_tuple(
 											f(c),
@@ -682,18 +723,8 @@ public:
 											// because they're called in hyp,
 											// so use standins instead.
 											// TODO: Find better way!
-											/* t_IV_w{}, */
-											t_IV_w(
-												[](t_e e) -> t_t {
-													return true;
-												}
-											),
-											/* t_IV_w{} */
-											t_IV_w(
-												[](t_e e) -> t_t {
-													return true;
-												}
-											)
+											standinL,
+											standinR
 										));
 										// get the relevant part of
 										// the output
@@ -728,15 +759,14 @@ public:
 	// Effectively, this is taking the component of a grammar's sentence
 	// that deals with defining a quantifier.
 	// (which of the quantifiers is specified by i)
-	template< int i >
-	auto q_n () {
-		return t_meaning([this](t_context c) -> t_Q {
-			return [c,this](t_IV x) -> t_DP {
-				return [x,c,this](t_IV y) -> t_t {
+	auto q_n (size_t i) {
+		return t_meaning([this, i](t_context c) -> t_Q {
+			return [c,this,i](t_IV x) -> t_DP {
+				return [x,c,this,i](t_IV y) -> t_t {
 					// First two not used, so default initialize
 					try {
 						auto tup = std::make_tuple(
-							// unused
+							// unused //
 							/* t_Q{}, */ 
 							[](t_IV m1) -> t_DP {
 								return [](t_IV m2) -> t_t {
@@ -751,7 +781,7 @@ public:
 							[](t_e e) -> t_t {
 								return true;
 							},
-							// used
+							// used //
 							c,
 							t_IV_w{x},
 							t_IV_w{y}
@@ -762,11 +792,12 @@ public:
 						// a t_t.
 			 			auto o = this->call(tup);
 						// Unfortunately I have to evaluate
-						// all three quantifiers and
+						// all quantifiers and
 						// get the unwrapped t_Q_M value.
 						// The '.i' is getting the value from the
 						// WrapperF<t_t> returned by the hypothesis.
-						return std::get<i>(o).i;
+						// return std::get<i>(o).i;
+						return std::get<1>(o).at(i)().i;
 					} catch (std::bad_function_call& e) {
 						std::cout << "here 2" << std::endl;
 						std::terminate();
@@ -792,11 +823,11 @@ public:
 			add_Qs
 		};
 
-		// The three quantifiers are part 
+		// The quantifiers are part 
 		// of the agents' language
-		lexSem.add("Q1", q_n<1>());
-		lexSem.add("Q2", q_n<2>());
-		lexSem.add("Q3", q_n<3>());
+		for (size_t i = 0; i < num_quants; i++) {
+			lexSem.add("Q" + std::to_string(i+1), q_n(i));
+		}
 		return lexSem;
 	
 	}
