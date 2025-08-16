@@ -639,6 +639,18 @@ public:
 		// NOTE: Here I disregard the data,
 		// since the likelihood only depends on communicative accuracy
 		// which I calculate inside this function.
+
+		// split the hypothesis into the composition function and the quantifiers
+		auto parts = split(this->string(), '|');
+		// get the quantifiers
+		std::vector<std::string> quantifiers(parts.begin() + 1, parts.end());
+		// check that each quantifier contains X.L or X.R
+		// if not, return -infinity
+		for (auto& q : quantifiers) {
+			if (q.find("X.L") == std::string::npos && q.find("X.R") == std::string::npos) {
+				return -std::numeric_limits<double>::infinity();
+			}
+		}
 		
 		// Agent to calculate communicative accuracy with
 		// initialized with current hypothesis
@@ -670,16 +682,14 @@ public:
 		// Note that commAcc is already the log of a probability
 		double loglik = likelihoodWeight * commAcc;
 
+		// print the hypothesis
+		std::cout << "Hypothesis: " << this->string() << std::endl;
+		std::cout << "Communicative accuracy: " << commAcc << std::endl;
+		std::cout << "Log likelihood: " << loglik << std::endl;
+		std::cout << std::endl;
+
 		return loglik;
 
-		// OLD: 
-		// Check that the composition operator in the hypothesis
-		// contains the quantifier, i.e., '.Q'
-		/* if ( this->string().find(".Q") != std::string::npos ){ */
-			// Block above went here
-		/* } else { */
-		/* 	return -std::numeric_limits<double>::infinity(); */
-		/* } */
 	}
 
 	// The hypotheses contain two components:

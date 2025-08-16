@@ -12,13 +12,21 @@ module load binutils/2.38-GCCcore-11.3.0
 # To run in parallel
 module load parallel/20220722-GCCcore-11.3.0
 
-# Compile script (assuming sbatch is run from the ./server/snellius directory)
-cd ../../
-make 
-
+# default values
 DEFAULTLIK=40
+DEFAULTNUMQUANTS=3
+DEFAULTPRAGMATIC=1
+
 # optional argument for likeweights
 ARG1=${1:-$DEFAULTLIK}
+# optional argument for num_quants
+ARG2=${2:-$DEFAULTNUMQUANTS}
+# optional argument for pragmatic
+ARG3=${3:-$DEFAULTPRAGMATIC}
+
+# Compile script (assuming sbatch is run from the ./server/snellius directory)
+cd ../../
+make EXTRA_FLAGS="-DNUM_QUANTS=$ARG2"
 
 # ID is a string with current time up to milliseconds
 ID=$(date +"%Y%m%d_%H%M%S_%3N")
@@ -29,7 +37,7 @@ ID=$(date +"%Y%m%d_%H%M%S_%3N")
 	--likelihoodweight 	$ARG1	 		\
 	--searchdepth		2		 		\
 	--fname 			"data/${ID}"	\
-	--pragmatic			0				\
+	--pragmatic			$ARG3			\
 	--ct				16
 
 # ./main --steps 10000 --nobs 5 --csize 5 --likelihoodweight 30 --searchdepth 2 --fname "data/10" --ct 16
