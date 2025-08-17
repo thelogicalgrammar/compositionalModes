@@ -164,6 +164,10 @@ namespace Quants_DSL{
 	static inline t_grammar_output makeGrammarOutput_fixed(t_t tQ, t_t_w q1, t_t_w q2, t_t_w q3, t_t_w q4) {
 		return makeGrammarOutput_thunked(tQ, q1, q2, q3, q4);
 	}
+	#elif NUM_QUANTS == 5
+	static inline t_grammar_output makeGrammarOutput_fixed(t_t tQ, t_t_w q1, t_t_w q2, t_t_w q3, t_t_w q4, t_t_w q5) {
+		return makeGrammarOutput_thunked(tQ, q1, q2, q3, q4, q5);
+	}
 	#else
 	#error "Add another makeGrammarOutput_fixed overload for this NUM_QUANTS"
 	#endif
