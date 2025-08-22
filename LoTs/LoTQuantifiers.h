@@ -586,6 +586,8 @@ private:
 	// For storing. 
 	// NOTE: This is not static! It depends on the specific hypothesis
 	data_t commData;
+	// For excluding empty quantifiers
+	static inline bool exclude_empty_qs = false;
 
 	// For defining the lexicon
 	bool add_es = true;
@@ -615,7 +617,8 @@ public:
 						  std::mt19937& local_rng,
 						  const size_t searchDepth,
 						  const double pTarget,
-						  const bool pragmatic) {
+						  const bool pragmatic,
+						  const bool exclude_empty_qs) {
 
 		// Set the parameters for the language hypothesis
 		// This is a static method of the LangHyp class
@@ -627,6 +630,7 @@ public:
 		QuantsHypothesis::searchDepth = searchDepth;
 		QuantsHypothesis::pTarget = pTarget;
 		QuantsHypothesis::pragmatic = pragmatic;
+		QuantsHypothesis::exclude_empty_qs = exclude_empty_qs;
 	}
 
 	QuantsHypothesis() : Super () {
@@ -644,18 +648,20 @@ public:
 		// since the likelihood only depends on communicative accuracy
 		// which I calculate inside this function.
 
-		// split the hypothesis into the composition function and the quantifiers
-		auto parts = split(this->string(), '|');
-		// get the quantifiers
-		std::vector<std::string> quantifiers(parts.begin() + 1, parts.end());
-		// check that each quantifier contains X.L or X.R
-		// if not, return -infinity
-		for (auto& q : quantifiers) {
-			if (q.find("X.L") == std::string::npos && q.find("X.R") == std::string::npos) {
-				return -std::numeric_limits<double>::infinity();
+		if (exclude_empty_qs) {
+			// split the hypothesis into the composition function and the quantifiers
+			auto parts = split(this->string(), '|');
+			// get the quantifiers
+			std::vector<std::string> quantifiers(parts.begin() + 1, parts.end());
+			// check that each quantifier contains X.L or X.R
+			// if not, return -infinity
+			for (auto& q : quantifiers) {
+				if (q.find("X.L") == std::string::npos && q.find("X.R") == std::string::npos) {
+					return -std::numeric_limits<double>::infinity();
+				}
 			}
 		}
-		
+
 		// Agent to calculate communicative accuracy with
 		// initialized with current hypothesis
 		Agent<QuantsHypothesis> agent{*this};

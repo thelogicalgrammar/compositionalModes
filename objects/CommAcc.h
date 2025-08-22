@@ -21,7 +21,8 @@ void estimateCommAcc(
 		std::mt19937& rng,
 		const std::string& fname,
 		size_t searchDepth = 2,
-		bool pragmatic = false
+		bool pragmatic = false,
+		bool exclude_empty_qs = false
 	){
 	// Make sure that this is the same as compute_likelihood
 
@@ -34,7 +35,8 @@ void estimateCommAcc(
 		rng,
 		searchDepth,
 		pTarget,
-		pragmatic
+		pragmatic,
+		exclude_empty_qs
 	);
 
 	// store runs 

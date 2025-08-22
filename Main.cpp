@@ -75,6 +75,7 @@ int main(int argc, char** argv) {
 	bool pragmatic 			= false;
 	double pTarget 			= 0.5;
 	std::string fname 		= "./data/tradeoff/";
+	bool exclude_empty_qs 	= false;
 
 	fleet.add_option<size_t>(
 		"--nobs",
@@ -111,7 +112,12 @@ int main(int argc, char** argv) {
 		fname,
 		"Folder name for saving runs"
 	);
-	
+	fleet.add_option<bool>(
+		"--exclude-empty-qs",
+		exclude_empty_qs,
+		"Whether to exclude systems containing empty quantifiers as possible hypotheses"
+	);
+
 	// Note that Fleet uses CLI11, so you can add your own options
 	fleet.initialize(argc, argv);
 
@@ -419,6 +425,7 @@ int main(int argc, char** argv) {
 			j["likelihoodweight"] 	= likelihoodWeight;
 			j["searchdepth"] 		= searchDepth;
 			j["pragmatic"] 			= pragmatic;
+			j["exclude_empty_qs"] 	= exclude_empty_qs;
 			j["steps"] 				= FleetArgs::steps;
 			j["num_quants"] 		= NUM_QUANTS;
 			jfile << j.dump() << std::endl;
@@ -443,7 +450,8 @@ int main(int argc, char** argv) {
 					pTarget,
 					pragmatic,
 					datafilepath,
-					hypfilepath
+					hypfilepath,
+					exclude_empty_qs
 				);
 
 			// save results to file with various params

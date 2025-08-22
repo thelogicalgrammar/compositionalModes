@@ -12,7 +12,8 @@ void runTradeoffAnalysis(
 		const double pTarget,
 		const bool pragmatic,
 		const std::filesystem::path& datafilepath,
-		const std::filesystem::path& hypfilepath
+		const std::filesystem::path& hypfilepath,
+		const bool exclude_empty_qs
 	){
 
 	// Set the parameters for the language hypothesis
@@ -24,7 +25,8 @@ void runTradeoffAnalysis(
 		rng,
 		searchDepth,
 		pTarget,
-		pragmatic
+		pragmatic,
+		exclude_empty_qs
 	);
 
 	// TopN object to store the best hypotheses
