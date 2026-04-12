@@ -25,6 +25,7 @@ ID=$(date +"%Y%m%d_%H%M%S")
 	--likelihoodweight 	30	 			\
 	--searchdepth		2		 		\
 	--fname 			"data/${ID}"	\
-	--ct				16
+	--ct				16			\
+	--simtype			"DEBUG"s
 	
 # ./main --steps 10000 --nobs 5 --csize 5 --likelihoodweight 30 --searchdepth 2 --fname "data/10" --ct 16

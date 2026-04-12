@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# NOTE: running ./runjobs.sh was giving me problems
+# So I just did it manually for the different settings
+
 # This is a parameter sweep over 
 #   1. the likelihood weight
 #   2. the number of quantifiers

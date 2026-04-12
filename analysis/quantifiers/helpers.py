@@ -354,16 +354,142 @@ def get_data_from_glob(path, include_commdata=False):
     df[['sig']] = pd.DataFrame({"sig": sig_col})
 
     # Now groupby sig
-    df['meanlikelihood'] = (
-        df.groupby(['sig', 'pragmatic'])
+    logliks = (
+        df
+        .groupby(['sig', 'pragmatic'])
         ['likelihood']
-        .transform('mean')
+        .transform(lambda x: np.log(np.exp(x).mean()))
     )
+
+    df['meanlikelihood'] = logliks
+
+    df['n_quants'] = df['hypothesis'].str.split('|').apply(len)-1
+    df['num_substantial'] = df.apply(lambda x: count_substantial(x['hypothesis']), axis=1)
+    df['count_equal'] = df.groupby('sig')['sig'].transform('count')
+
+    df['c_latex'] = df['c'].apply(lambda x: "$" + format_latex(parse_sexpr(x[3:])) + "$")
+    df['q0_latex'] = df['q0'].apply(lambda x: "$" + format_latex(parse_sexpr(x)) + "$")
+    df['q1_latex'] = df['q1'].apply(lambda x: "$" + format_latex(parse_sexpr(x)) + "$")
+    df['q2_latex'] = df['q2'].apply(lambda x: "$" + format_latex(parse_sexpr(x)) + "$")
 
     if include_commdata:
         return df, [x['commData'] for x in data]
     else:
         return df
+
+
+##### Formatting hypotheses for LaTeX #####
+INFIX = {
+    "union":        r"\cup",
+    "intersection": r"\cap",
+    "setminus":     r"\setminus",
+    "intEq":        r"=",
+    "intGt":        r">",
+    "+":            r"+",
+    "-":            r"-",
+    "and":          r"\land",
+    "or":           r"\lor",
+}
+
+UNARY = {
+    "not": r"\neg",
+}
+
+SYMBOLS = {
+    "X.L": "L",
+    "X.R": "R",
+    "X.c": "c",
+    "X.Q": "Q",
+}
+
+def _to_list(expr):
+    return list(expr) if isinstance(expr, tuple) else expr
+
+def _flatten_head(lst):
+    """Flatten left-nested applications: [[h, a], b, c] -> [h, a, b, c]."""
+    while isinstance(lst[0], (list, tuple)):
+        sub = _to_list(lst[0])
+        lst = sub + lst[1:]
+    return lst
+
+def format_latex(expr):
+    # atoms
+    if isinstance(expr, int):
+        return str(expr)
+    if isinstance(expr, str):
+        return SYMBOLS.get(expr, expr)
+
+    expr = _to_list(expr)
+    if not isinstance(expr, list) or not expr:
+        raise ValueError(f"Invalid expression: {expr!r}")
+
+    # ensure head is not a list (handles partial application)
+    expr = _flatten_head(expr)
+    head, *args = expr
+
+    # if head is still non-string, treat as generic application
+    if not isinstance(head, str):
+        if not args:
+            return format_latex(head)
+        if len(args) == 1:
+            return f"({format_latex(head)} {format_latex(args[0])})"
+        inside = ", ".join(format_latex(a) for a in args)
+        return rf"({format_latex(head)}\!\left({inside}\right))"
+
+    # --- Unary constructors (robust to extra args) ---
+    if head == "universe":
+        if not args:
+            raise ValueError("universe needs at least 1 argument")
+        base = rf"\mathbb{{U}}^{{{format_latex(args[0])}}}"
+        if len(args) > 1:
+            tail = ", ".join(format_latex(a) for a in args[1:])
+            return rf"({base}\!\left({tail}\right))"
+        return base
+
+    if head == "cardinality":
+        if len(args) < 2:
+            raise ValueError("cardinality needs at least 2 argument")
+        base = rf"\lvert {format_latex(args[0])} \rvert^{{ {format_latex(args[1])} }}"  
+        if len(args) > 2:
+            tail = ", ".join(format_latex(a) for a in args[2:])
+            return rf"({base}\!\left({tail}\right))"
+        return base
+
+    if head in UNARY:
+        if not args:
+            raise ValueError(f"{head} needs at least 1 argument")
+        base = f"{UNARY[head]} {format_latex(args[0])}"
+        if len(args) > 1:
+            tail = ", ".join(format_latex(a) for a in args[1:])
+            return rf"({base}\!\left({tail}\right))"
+        return base
+
+    # --- Infix operators: 2+ args ---
+    if head in INFIX:
+        if len(args) < 2:
+            raise ValueError(f"{head} needs at least 2 arguments")
+        parts = [format_latex(a) for a in args]
+        return "(" + f" {INFIX[head]} ".join(parts) + ")"
+
+    # --- Special: X.Q as 2-arg predicate (supports partial application via flatten) ---
+    if head == "X.Q":
+        if len(args) < 2:
+            raise ValueError("X.Q needs at least 2 arguments")
+        core = rf"Q\!\left({format_latex(args[0])},\, {format_latex(args[1])}\right)"
+        if len(args) > 2:
+            tail = ", ".join(format_latex(a) for a in args[2:])
+            return rf"({core}\!\left({tail}\right))"
+        return core
+
+    # --- Generic application ---
+    if not args:
+        return format_latex(head)
+    if len(args) == 1:
+        return f"({format_latex(head)} {format_latex(args[0])})"
+    inside = ", ".join(format_latex(a) for a in args)
+    return rf"({format_latex(head)}\!\left({inside}\right))"
+
+
 
 
 def count_substantial(hyp):

@@ -55,9 +55,10 @@
 // Names for the possible simulations that we can run in main
 enum class SimulationType {
 	TESTGRAMMAR,
-	TESTCOMMUNICATION,
+	MEASURECOMMUNICATION,
 	TRADEOFF,
-	DEBUG
+	DEBUG,
+	ENTAILMENTS
 };
 
 int main(int argc, char** argv) {
@@ -76,6 +77,9 @@ int main(int argc, char** argv) {
 	double pTarget 			= 0.5;
 	std::string fname 		= "./data/tradeoff/";
 	bool exclude_empty_qs 	= false;
+	std::string quantifier_string = "";
+	std::string filename_quant = "";
+	std::string simType = "";
 
 	fleet.add_option<size_t>(
 		"--nobs",
@@ -117,21 +121,48 @@ int main(int argc, char** argv) {
 		exclude_empty_qs,
 		"Whether to exclude systems containing empty quantifiers as possible hypotheses"
 	);
+	fleet.add_option<std::string>(
+		"--quantifier-string",
+		quantifier_string,
+		"String representation of the quantifiers if mode is MEASURECOMMUNICATION"
+	);
+	fleet.add_option<std::string>(
+		"--filename_quant",
+		filename_quant,
+		"Filename for saving quantifier runs if MEASURECOMMUNICATION"
+	);
+	fleet.add_option<std::string>(
+		"--simtype",
+		simType,
+		"Simulation type: TESTGRAMMAR, MEASURECOMMUNICATION, TRADEOFF, DEBUG, ENTAILMENTS"
+	);
 
 	// Note that Fleet uses CLI11, so you can add your own options
 	fleet.initialize(argc, argv);
+
+	// Decide what simulation to run based on command line argument
+	static const std::map<std::string, SimulationType> simTypeMap = {
+		{"TESTGRAMMAR", SimulationType::TESTGRAMMAR},
+		{"MEASURECOMMUNICATION", SimulationType::MEASURECOMMUNICATION},
+		{"TRADEOFF", SimulationType::TRADEOFF},
+		{"DEBUG", SimulationType::DEBUG},
+		{"ENTAILMENTS", SimulationType::ENTAILMENTS}
+	};
+	if (simType.empty()) {
+		throw std::runtime_error("--simtype is required. Valid options: TESTGRAMMAR, MEASURECOMMUNICATION, TRADEOFF, DEBUG, ENTAILMENTS");
+	}
+	auto it = simTypeMap.find(simType);
+	if (it == simTypeMap.end()) {
+		throw std::runtime_error("Invalid simulation type: " + simType + 
+			". Valid options: TESTGRAMMAR, MEASURECOMMUNICATION, TRADEOFF, DEBUG, ENTAILMENTS");
+	}
+	SimulationType simulationType = it->second;
 
 	// Since we use TopN as a finite approximation
 	FleetArgs::MCMCYieldOnlyChanges = true;
 
     std::random_device rd;
     std::mt19937 rng(rd());
-
-	// Decide what simulation to run
-	// SimulationType simulationType = SimulationType::TESTCOMMUNICATION;
-	/* SimulationType simulationType = SimulationType::TESTGRAMMAR; */
-	SimulationType simulationType = SimulationType::TRADEOFF;
-	/* SimulationType simulationType = SimulationType::DEBUG; */
 
 	switch (simulationType) {
 
@@ -149,223 +180,22 @@ int main(int argc, char** argv) {
 			break;
 		}
 		
-		case SimulationType::TESTCOMMUNICATION: {
+		case SimulationType::MEASURECOMMUNICATION: {
 
-			/* // λx.( ( X.Q X.L ) X.L ) */ 
-			/* // "Exactly one thing is L" */
-			/* // ( intEq ( cardinality X.R X.c ) 1 ) */ 
-			/* // ( intGt 1 0 ) */ 
-			/* // ( intEq 0 1 ) */
-			/* std::string x1 = */ 
-			/* 	"1:%s | %s | %s | %s;3:( %s %s );7:( %s %s );6:%s.Q;0:X;4:%s.L;0:X;4:%s.L;0:X;" */
-			/* 	"8:( intEq %s %s );10:( cardinality %s %s );9:%s.R;0:X;2:%s.c;0:X;10:1;" */
-			/* 	"8:( intGt %s %s );10:1;10:0;" */
-			/* 	"8:( intEq %s %s );10:0;10:1"; */
+			if (quantifier_string == "") {
+				throw std::runtime_error("Quantifier string is required for simulation type MEASURECOMMUNICATION");
+			}
 
-			/* estimateCommAcc<QuantsHypothesis>( */
-			/* 	x1, */
-			/* 	nObs, */
-			/* 	cSize, */
-			/* 	likelihoodWeight, */
-			/*	pTarget, */
-			/* 	rng, */
-			/* 	"./data/exactlyOneThing.txt" */
-			/* ); */
-
-			/* // λx.( ( X.Q X.L ) ( setminus X.L X.R ) ) */ 
-			/* // ( intGt 0 1 ) */ 
-			/* // ( intGt 1 0 ) */ 
-			/* // "All L is R" */
-			/* // ( intEq ( cardinality X.R X.c ) 0 ) */
-			/* std::string x2 = */ 
-			/* 	"1:%s | %s | %s | %s;3:( %s %s );7:( %s %s );6:%s.Q;0:X;4:%s.L;0:X;4:( setminus %s %s );4:%s.L;0:X;4:%s.R;0:X;" */
-			/* 	"8:( intGt %s %s );10:0;10:1;" */
-			/* 	"8:( intGt %s %s );10:1;10:0;" */
-			/* 	"8:( intEq %s %s );10:( cardinality %s %s );9:%s.R;0:X;2:%s.c;0:X;10:0"; */
-
-			/* estimateCommAcc<QuantsHypothesis>( */
-			/* 	x2, */
-			/* 	nObs, */
-			/* 	cSize, */
-			/* 	likelihoodWeight, */
-			/*	pTarget, */
-			/* 	rng, */
-			/* 	"./data/all.txt" */
-			/* ); */
-
-			/* // λx.( ( X.Q ( intersection X.L X.R ) ) X.R ) */ 
-			/* // "No R is L" */
-			/* // ( intEq ( cardinality X.L X.c ) 0 ) */
-			/* // ( intGt 0 1 ) */ 
-			/* // ( intGt 0 1 ) */ 
-			/* std::string x3 = */ 
-			/* 	"1:%s | %s | %s | %s;3:( %s %s );7:( %s %s );6:%s.Q;0:X;4:( intersection %s %s );4:%s.L;0:X;4:%s.R;0:X;4:%s.R;0:X;" */
-			/* 	"8:( intEq %s %s );10:( cardinality %s %s );9:%s.L;0:X;2:%s.c;0:X;10:0;" */
-			/* 	"8:( intGt %s %s );10:0;10:1;" */
-			/* 	"8:( intGt %s %s );10:0;10:1"; */
-
-			/* estimateCommAcc<QuantsHypothesis>( */
-			/* 	x3, */
-			/* 	nObs, */
-			/* 	cSize, */
-			/* 	likelihoodWeight, */
-			/*	pTarget, */
-			/* 	rng, */
-			/* 	"./data/no.txt" */
-			/* ); */
-
-			/* // λx.( ( X.Q ( intersection X.L X.R ) ) X.R ) */ 
-			/* // ( intGt 0 1 ) */ 
-			/* // ( intGt 0 1 ) */ 
-			/* // "Some and not all R is L" */
-			/* // ( intGt 0 ( cardinality X.L X.c ) ) etc. */
-			/* std::string x4 = */ 
-			/* 	"1:%s | %s | %s | %s;3:( %s %s );7:( %s %s );6:%s.Q;0:X;4:( intersection %s %s );4:%s.L;0:X;4:%s.R;0:X;4:%s.R;0:X;" */
-			/* 	"8:( intGt %s %s );10:0;10:1;" */
-			/* 	"8:( intGt %s %s );10:0;10:1;" */
-			/* 	"8:( and %s %s );8:( not %s );8:( intGt %s %s );10:( cardinality %s %s );9:%s.L;0:X;2:%s.c;0:X;10:0;8:( intEq %s %s );10:0;10:( cardinality %s %s );9:%s.L;0:X;2:%s.c;0:X;9:%s.R;0:X;2:%s.c;0:X"; */
-
-			/* estimateCommAcc<QuantsHypothesis>( */
-			/* 	x4, */
-			/* 	nObs, */
-			/* 	cSize, */
-			/* 	likelihoodWeight, */
-			/*  pTarget, */
-			/* 	rng, */
-			/* 	"./data/someNotAll.txt" */
-			/* ); */
-			
-			/* // λx.( ( X.Q ( intersection X.L X.R ) ) X.R ) */ 
-			/* // ( intGt 0 1 ) */ 
-			/* // ( intGt 0 1 ) */ 
-			/* // "Some R is L" */
-			/* // ( intGt 0 ( cardinality X.L X.c ) ) */
-			/* std::string x5 = */ 
-			/* 	"1:%s | %s | %s | %s;3:( %s %s );7:( %s %s );6:%s.Q;0:X;4:( intersection %s %s );4:%s.L;0:X;4:%s.R;0:X;4:%s.R;0:X;" */
-			/* 	"8:( intGt %s %s );10:0;10:1;" */
-			/* 	"8:( intGt %s %s );10:0;10:1;" */
-			/* 	"8:( intGt %s %s );10:( cardinality %s %s );9:%s.L;0:X;2:%s.c;0:X;10:0"; */
-
-			/* estimateCommAcc<QuantsHypothesis>( */
-			/* 	x5, */
-			/* 	nObs, */
-			/* 	cSize, */
-			/* 	likelihoodWeight, */
-			/*  pTarget, */
-			/* 	rng, */
-			/* 	"./data/some.txt" */
-			/* ); */
-
-			/* // λx.( ( X.Q ( intersection X.L X.R ) ) X.R ) */ 
-			/* // "No R is L" */
-			/* // ( intEq ( cardinality X.L X.c ) 0 ) */
-			/* // ( intGt 0 1 ) */ 
-			/* // "Some R is L" */
-			/* // ( intGt 0 ( cardinality X.L X.c ) ) */
-			/* std::string x6 = */ 
-			/* 	"1:%s | %s | %s | %s;3:( %s %s );7:( %s %s );6:%s.Q;0:X;4:( intersection %s %s );4:%s.L;0:X;4:%s.R;0:X;4:%s.R;0:X;" */
-			/* 	"8:( intEq %s %s );10:( cardinality %s %s );9:%s.L;0:X;2:%s.c;0:X;10:0;" */
-			/* 	"8:( intGt %s %s );10:0;10:1;" */
-			/* 	"8:( intGt %s %s );10:( cardinality %s %s );9:%s.L;0:X;2:%s.c;0:X;10:0"; */
-
-			/* estimateCommAcc<QuantsHypothesis>( */
-			/* 	x6, */
-			/* 	nObs, */
-			/* 	cSize, */
-			/* 	likelihoodWeight, */
-			/*  pTarget, */
-			/* 	rng, */
-			/* 	"./data/no_some.txt" */
-			/* ); */
-			
-			/* // λx.( ( X.Q ( intersection X.L X.R ) ) X.R ) */ 
-			/* // "No R is L" */
-			/* // ( intEq ( cardinality X.L X.c ) 0 ) */
-			/* // "All R is L" */
-			/* // ( intEq ( cardinality X.L X.c ) ( cardinality X.R X.c ) ) */
-			/* // "Some R is L" */
-			/* // ( intGt 0 ( cardinality X.L X.c ) ) */
-			/* std::string x7 = */ 
-			/* 	"1:%s | %s | %s | %s;3:( %s %s );7:( %s %s );6:%s.Q;0:X;4:( intersection %s %s );4:%s.L;0:X;4:%s.R;0:X;4:%s.R;0:X;" */
-			/* 	"8:( intEq %s %s );10:( cardinality %s %s );9:%s.L;0:X;2:%s.c;0:X;10:0;" */
-			/* 	"8:( intEq %s %s );10:( cardinality %s %s );9:%s.L;0:X;2:%s.c;0:X;10:( cardinality %s %s );9:%s.R;0:X;2:%s.c;0:X;" */
-			/* 	"8:( intGt %s %s );10:( cardinality %s %s );9:%s.L;0:X;2:%s.c;0:X;10:0"; */
-
-			/* estimateCommAcc<QuantsHypothesis>( */
-			/* 	x7, */
-			/* 	nObs, */
-			/* 	cSize, */
-			/* 	likelihoodWeight, */
-			/*	pTarget, */
-			/* 	rng, */
-			/* 	"./data/no_all_some.txt" */
-			/* ); */
-			
-			// λx.( ( X.Q ( intersection X.L X.R ) ) X.R ) 
-			// ( intGt 0 1 ) 
-			// "All R is L"
-			// ( intEq ( cardinality X.L X.c ) ( cardinality X.R X.c ) )
-			// "Some and not all R is L"
-			// ( intGt 0 ( cardinality X.L X.c ) ) etc.
-			std::string x8 = 
-				"1:%s | %s | %s | %s;3:( %s %s );7:( %s %s );6:%s.Q;0:X;4:( intersection %s %s );4:%s.L;0:X;4:%s.R;0:X;4:%s.R;0:X;"
-				"8:( intGt %s %s );10:0;10:1;"
-				"8:( intEq %s %s );10:( cardinality %s %s );9:%s.L;0:X;2:%s.c;0:X;10:( cardinality %s %s );9:%s.R;0:X;2:%s.c;0:X;"
-				"8:( and %s %s );8:( intGt %s %s );10:( cardinality %s %s );9:%s.R;0:X;2:%s.c;0:X;10:( cardinality %s %s );9:%s.L;0:X;2:%s.c;0:X;8:( intGt %s %s );10:( cardinality %s %s );9:%s.L;0:X;2:%s.c;0:X;10:0";
+			if (filename_quant == "") filename_quant = "quantifier_runs.txt";
 
 			estimateCommAcc<QuantsHypothesis>(
-				x8,
+				quantifier_string,
 				nObs,
 				cSize,
 				likelihoodWeight,
 				pTarget,
 				rng,
-				"./data/all_someNotAll.txt",
-				searchDepth,
-				pragmatic
-			);
-
-			// ( ( X.Q X.L ) ( setminus X.R X.L ) )  
-			// ( intEq 1 1 ) 
-			// ( intEq ( cardinality X.R X.c ) ( cardinality X.L X.c ) ) 
-			// ( intEq 1 0 )
-			std::string x9 = 
-				"1:%s | %s | %s | %s;3:( %s %s );7:( %s %s );6:%s.Q;0:X;4:%s.L;0:X;4:( setminus %s %s );4:%s.R;0:X;4:%s.L;0:X;"
-				"8:( intEq %s %s );10:1;10:1;"
-				"8:( intEq %s %s );10:( cardinality %s %s );9:%s.R;0:X;2:%s.c;0:X;10:( cardinality %s %s );9:%s.L;0:X;2:%s.c;0:X;"
-				"8:( intEq %s %s );10:1;10:0";
-
-			estimateCommAcc<QuantsHypothesis>(
-				x9,
-				nObs,
-				cSize,
-				likelihoodWeight,
-				pTarget,
-				rng,
-				"./data/paretoSimple.txt",
-				searchDepth,
-				pragmatic
-			);
-
-			// ( ( X.Q X.R ) ( setminus X.L X.R ) ) 
-			// ( intEq ( cardinality X.L X.c ) ( cardinality X.R X.c ) ) 
-			// ( intEq ( cardinality X.R X.c ) 0 ) 
-			// ( intEq 0 1 )
-
-			std::string x10 = 
-				"1:%s | %s | %s | %s;3:( %s %s );7:( %s %s );6:%s.Q;0:X;4:%s.R;0:X;4:( setminus %s %s );4:%s.L;0:X;4:%s.R;0:X;"
-				"8:( intEq %s %s );10:( cardinality %s %s );9:%s.L;0:X;2:%s.c;0:X;10:( cardinality %s %s );9:%s.R;0:X;2:%s.c;0:X;"
-				"8:( intEq %s %s );10:( cardinality %s %s );9:%s.R;0:X;2:%s.c;0:X;10:0;"
-				"8:( intEq %s %s );10:0;10:1";
-
-			estimateCommAcc<QuantsHypothesis>(
-				x10,
-				nObs,
-				cSize,
-				likelihoodWeight,
-				pTarget,
-				rng,
-				"./data/paretoComplex.txt",
+				"./data/individual_systems/" + filename_quant + ".txt",
 				searchDepth,
 				pragmatic
 			);
@@ -463,6 +293,41 @@ int main(int argc, char** argv) {
 			/* 	); */
 
 			/* saveResults<QuantsHypothesis>(filepath, results); */
+
+			break;
+		}
+
+		case SimulationType::ENTAILMENTS: {
+
+			// NOT IMPLEMENTED YET
+
+			// QuantsHypothesis::setParams(
+			// 	nObs,
+			// 	cSize,
+			// 	likelihoodWeight,
+			// 	rng,
+			// 	searchDepth,
+			// 	pTarget,
+			// 	pragmatic,
+			// 	exclude_empty_qs
+			// );
+
+			// Agent<QuantsHypothesis> agent{quantifier_string};
+
+			// // get everything from the trueHyp
+			// LexicalSemantics lex 		= agent.getHypothesis().getLexicon();
+			// t_terminalsMap terminalsMap = agent.generateTerminalsMap(lex);
+			// t_BTC_compose compositionFn = agent.getHypothesis().getCompositionF();
+	
+			// // Find *all* sentences (true and false) given the grammar
+			// // up to a certain depth
+			// t_BTC_vec allSentences = enumerateSentences(
+			// 		compositionFn,
+			// 		lex,
+			// 		terminalsMap,
+			// 		searchDepth
+			// 	);
+
 
 			break;
 		}

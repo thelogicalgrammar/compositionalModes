@@ -575,8 +575,8 @@ private:
 	static inline size_t cSize = 0;
 	// Weight of communicative accuracy in tradeoff
 	static inline double likelihoodWeight = 0.0;
-	// Initialize random number generator anew 
-	static inline std::mt19937 local_rng = std::mt19937(std::random_device{}());
+	// Each thread gets its own RNG to avoid data races under ParallelTempering
+	static inline thread_local std::mt19937 local_rng = std::mt19937(std::random_device{}());
 	// Maximum depth of signals when enumerating utterances
 	// to estimate communicative accuracy
 	static inline size_t searchDepth = 2;

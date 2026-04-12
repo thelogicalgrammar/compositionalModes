@@ -130,7 +130,7 @@ enriched_cardinality_EBE(
 		const std::size_t nU = tt.size();
 		const std::size_t nW = tt.front().size();
 
-		// short‑circuit: if utterance false in C it can never be chosen
+		// short‑circuit: if utterance is false in C it can never be chosen
 		if (!tt[u][C]) return {nW+1, false};
 
 		// number of worlds in which the utterance is true
@@ -140,14 +140,21 @@ enriched_cardinality_EBE(
 		bool containsC   = true;
 
 		// loop over possible contexts
+		// and decide for each whether it is excluded
+		// by the pragmatic enrichment
 		for (std::size_t w = 0; w < nW; ++w) {
-			// world not in utterance anyway
+			// true utterance u is not true in this world
+			// so we don't have to increase card of enriched meaning
 			if (!tt[u][w]) continue;              
 
 			bool excluded = false;
-			// loop over other utterances
+			// loop over other utterances until we possibly
+			// find an utterance that excludes this world
 			for (std::size_t v = 0; v < nU && !excluded; ++v) {
 				if (v == u) continue;
+				// if the utterance we are looping over is a subset 
+				// of the actual utterance and it's true in the world
+				// then we can exclude this world
 				if (proper_subset(tt[v], tt[u]) && tt[v][w])
 					// ruled out because it's a stronger utterance
 					excluded = true;              
@@ -157,7 +164,8 @@ enriched_cardinality_EBE(
 				// survives exhaustification
 				++card;                           
 			} else if (w == C) {
-				// actual world got excluded
+				// an alternative excluded the actual world!
+				// There is a stronger utterance that is true in this world.
 				containsC = false;                
 			}
 		}
