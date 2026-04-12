@@ -41,7 +41,8 @@
 // Grammar and Hypothesis for the parts of language to infer
 // INCLUDE ONLY THE ONE YOU NEED
 /* #include "LoTs/LoTCompFunc.h" */
-#include "LoTs/LoTQuantifiers.h"
+/* #include "LoTs/LoTQuantifiers.h" */
+#include "LoTs/LoTQuantifiersComposite.h"
 // Implementation of the tradeoff analysis
 #include "objects/Tradeoff.h"
 #include "objects/CommAcc.h"

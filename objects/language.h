@@ -99,7 +99,7 @@ public:
 		for (size_t i = 0; i < cSize; i++) {
 			add(
 				std::to_string(i) + "_e",
-				[i](t_context c) -> t_e {
+				[i](const t_context& c) -> t_e {
 					// return the i-th element of the context
 					// Use runtime indexing instead of compile-time std::get
 					auto it = c.begin();
@@ -116,7 +116,7 @@ public:
 		// true
 		add(
 			"true",
-			[](t_context c) -> t_t {
+			[](const t_context& c) -> t_t {
 				return true;
 			}
 		);
@@ -124,7 +124,7 @@ public:
 		// false
 		add(
 			"false",
-			[](t_context c) -> t_t {
+			[](const t_context& c) -> t_t {
 				return false;
 			}
 		);
@@ -138,7 +138,7 @@ public:
 		
 		add( 
 			"l_not", 
-			[](t_context c) -> t_UC {
+			[](const t_context& c) -> t_UC {
 				return [](t_t x) -> t_t { 
 					return !x; 
 				};
@@ -149,7 +149,7 @@ public:
 		
 		add(
 			"l_and",
-			[](t_context c) -> t_BC {
+			[](const t_context& c) -> t_BC {
 				return [](t_t x) -> t_UC {
 					// the function is curried
 					return [x](t_t y) -> t_t { 
@@ -161,7 +161,7 @@ public:
 
 		add(
 			"l_or",
-			[](t_context c) -> t_BC {
+			[](const t_context& c) -> t_BC {
 				return [](t_t x) -> t_UC {
 					return [x](t_t y) -> t_t {
 						return x || y;
@@ -174,7 +174,7 @@ public:
 		
 		add(
 			"l_if_else",
-			[](t_context c) -> t_TC {
+			[](const t_context& c) -> t_TC {
 				return [](t_t x) -> t_BC {
 					return [x](t_t y) -> t_UC {
 						return [x,y](t_t z) -> t_t {
@@ -194,7 +194,7 @@ public:
 		// It can used e.g., in combination with a quantifier
 		// like "every" to mean "everything"
 		add( "thing", 
-			[](t_context c) -> t_IV {
+			[](const t_context& c) -> t_IV {
 				return [](t_e x) -> t_t {
 					return true;
 				};
@@ -202,7 +202,7 @@ public:
 		);
 
 		// add( "positive",
-		// 	[](t_context c) -> t_IV {
+		// 	[](const t_context& c) -> t_IV {
 		// 		return [](t_e x) -> t_t {
 		// 			int o = std::get<0>(x);
 		// 			return o > 0;
@@ -211,7 +211,7 @@ public:
 	   	// );
 
 		// add( "negative",
-		// 	[](t_context c) -> t_IV {
+		// 	[](const t_context& c) -> t_IV {
 		// 		return [](t_e x) -> t_t {
 		// 			int o = std::get<0>(x);
 		// 			return o < 0;
@@ -220,7 +220,7 @@ public:
 		// );
 
 		add( "even",
-			[](t_context c) -> t_IV {
+			[](const t_context& c) -> t_IV {
 				return [](t_e x) -> t_t {
 					int o = std::get<0>(x);
 					return o % 2 == 0;
@@ -229,7 +229,7 @@ public:
 		);
 
 		add( "prime",
-			[](t_context c) -> t_IV {
+			[](const t_context& c) -> t_IV {
 				return [](t_e x) -> t_t {
 					int o = std::get<0>(x);
 					if (o <= 1) return false;
@@ -244,7 +244,7 @@ public:
 		);
 
 		add( "target",
-			[](t_context c) -> t_IV {
+			[](const t_context& c) -> t_IV {
 				return [](t_e x) -> t_t {
 					// check that the object is a target
 					return std::get<1>(x);
@@ -253,7 +253,7 @@ public:
 		);
 
 		add( "distractor",
-			[](t_context c) -> t_IV {
+			[](const t_context& c) -> t_IV {
 				return [](t_e x) -> t_t {
 					// check that the object is a distractor
 					return !std::get<1>(x);
@@ -266,7 +266,7 @@ public:
 		// for (int i = 0; i < 6; i++) {
 		// 	add(
 		// 		std::to_string(i),
-		// 		[i](t_context c) -> t_IV {
+		// 		[i](const t_context& c) -> t_IV {
 		// 			return [i](t_e x) -> t_t {
 		// 				return std::get<0>(x) == i;
 		// 			};
@@ -287,7 +287,7 @@ public:
 
 		// greater than
 		add( "gt",
-			[](t_context c) -> t_TV{
+			[](const t_context& c) -> t_TV{
 				return [](t_e y) -> t_IV {
 					int o1 = std::get<0>(y);
 					return [o1](t_e x) -> t_t {
@@ -300,7 +300,7 @@ public:
 
 		// two entities are equal with respect to their content
 		add( "equal",
-			[](t_context c) -> t_TV {
+			[](const t_context& c) -> t_TV {
 				return [](t_e y) -> t_IV {
 					int o1 = std::get<0>(y);
 					return [o1](t_e x) -> t_t {
@@ -312,7 +312,7 @@ public:
 		);
 
 		// add( "divides",
-		// 	[](t_context c) -> t_TV {
+		// 	[](const t_context& c) -> t_TV {
 		// 		return [](t_e y) -> t_IV {
 		// 			// get the content of the object
 		// 			int o1 = std::get<0>(y);
@@ -332,8 +332,8 @@ public:
 	void addDPs() {
 		
 		add( "something",
-			[](t_context c) -> t_DP {
-				return [c](t_IV x) -> t_t {
+			[](const t_context& c) -> t_DP {
+				return [c](const t_IV& x) -> t_t {
 					// loop over the domain
 					// if any of the elements are true, return true
 					for (auto obj : c) {
@@ -345,8 +345,8 @@ public:
 		);
 
 		add( "everything",
-			[](t_context c) -> t_DP {
-				return [c](t_IV x) -> t_t {
+			[](const t_context& c) -> t_DP {
+				return [c](const t_IV& x) -> t_t {
 					// loop over the domain
 					for (auto obj : c) {
 						if (!x(obj)) return false;
@@ -357,8 +357,8 @@ public:
 		);
 
 		add("nothing",
-			[](t_context c) -> t_DP {
-				return [c](t_IV x) -> t_t {
+			[](const t_context& c) -> t_DP {
+				return [c](const t_IV& x) -> t_t {
 					// loop over the domain
 					for (auto obj : c) {
 						if (x(obj)) return false;
@@ -371,8 +371,8 @@ public:
 		/* for (int i = 0; i < 5; i++) { */
 		/* 	add( */ 
 		/* 		"exactly_" + std::to_string(i), */
-		/* 		[i](t_context c) -> t_DP { */
-		/* 			return [c,i](t_IV x) -> t_t { */
+		/* 		[i](const t_context& c) -> t_DP { */
+		/* 			return [c,i](const t_IV& x) -> t_t { */
 		/* 				int count = 0; */
 		/* 				// loop over the domain */
 		/* 				for (auto obj : c) { */
@@ -389,8 +389,8 @@ public:
 	void addPMs() {
 
 		add( "notP",
-			[](t_context c) -> t_PM {
-				return [](t_IV x) -> t_IV {
+			[](const t_context& c) -> t_PM {
+				return [](const t_IV& x) -> t_IV {
 					return [x](t_e e) -> t_t {
 						return !x(e);
 					};
@@ -403,10 +403,10 @@ public:
 	void addPMMs() {
 
 		add( "andP",
-			[](t_context c) -> t_PMM {
-				return [c](t_IV x) -> t_PM {
+			[](const t_context& c) -> t_PMM {
+				return [c](const t_IV& x) -> t_PM {
 					// Return this modified predicate
-					return [x,c](t_IV y) -> t_IV {
+					return [x,c](const t_IV& y) -> t_IV {
 						// returns true if both xs are true
 						return [x,y](t_e z) -> t_t {
 							// returns true if both xs are true
@@ -418,9 +418,9 @@ public:
 		);
 
 		add( "orP",
-			[](t_context c) -> t_PMM {
-				return [c](t_IV x) -> t_PM {
-					return [x,c](t_IV y) -> t_IV {
+			[](const t_context& c) -> t_PMM {
+				return [c](const t_IV& x) -> t_PM {
+					return [x,c](const t_IV& y) -> t_IV {
 						// returns true if either x or y is true
 						return [x,y](t_e z) -> t_t {
 							return x(z) || y(z);
@@ -436,9 +436,9 @@ public:
 	void addQs() {
 		
 		add( "every",
-			[](t_context c) -> t_Q {
-				return [c](t_IV x) -> t_DP {
-					return [x,c](t_IV y) -> t_t {
+			[](const t_context& c) -> t_Q {
+				return [c](const t_IV& x) -> t_DP {
+					return [x,c](const t_IV& y) -> t_t {
 						// returns true if all xs are ys
 						for (auto e : c) {
 							if (x(e) && !y(e)) return false; 
@@ -450,9 +450,9 @@ public:
 		);
 
 		add( "some",
-			[](t_context c) -> t_Q {
-				return [c](t_IV x) -> t_DP {
-					return [x,c](t_IV y) -> t_t {
+			[](const t_context& c) -> t_Q {
+				return [c](const t_IV& x) -> t_DP {
+					return [x,c](const t_IV& y) -> t_t {
 						// returns true if any xs are ys
 						for (auto e : c) {
 							if (x(e) && y(e)) return true; 
@@ -468,9 +468,9 @@ public:
 		// throws PresuppositionFailure.
 		// otherwise returns false
 		add( "the",
-			[](t_context c) -> t_Q {
-				return [c](t_IV x) -> t_DP {
-					return [x,c](t_IV y) -> t_t {
+			[](const t_context& c) -> t_Q {
+				return [c](const t_IV& x) -> t_DP {
+					return [x,c](const t_IV& y) -> t_t {
 						int count_x = 0;
 						bool found = false;
 						for (auto e : c) {

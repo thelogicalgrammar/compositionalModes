@@ -12,15 +12,12 @@ using t_UC  = ft< t_t,  t_t  >;
 using t_BC  = ft< t_UC, t_t  >;
 using t_TC  = ft< t_BC, t_t	 >; // e.g., "if x then y else z"
 using t_IV  = ft< t_t,  t_e  >; // IV, CN, ADJ
-using t_DP  = ft< t_t,  t_IV >; // DP (e.g., "something (is)")
 using t_TV  = ft< t_IV, t_e  >; // TV, P
-// These are type <<e, t>, <e, t>>
-// Predicate Modifiers
-using t_PM  = ft< t_IV, t_IV >; // e.g., negation of an IV
-// These are type <<e, t>, < <e, t>, <e, t> >>
-// Predicate Modifiers Modifiers
-using t_PMM = ft< t_PM, t_IV >; // e.g., coordination of IVs
-using t_Q   = ft< t_DP, t_IV >;
+// Types that take t_IV by const& to avoid copying std::function
+using t_DP  = std::function< t_t(const t_IV&)  >; // DP (e.g., "something (is)")
+using t_PM  = std::function< t_IV(const t_IV&) >; // Predicate Modifier
+using t_PMM = std::function< t_PM(const t_IV&) >; // Predicate Modifier Modifier
+using t_Q   = std::function< t_DP(const t_IV&) >;
 
 
 // TO ADD
@@ -62,18 +59,19 @@ struct PresuppositionFailure : public std::exception {
 
 
 // Define the types of the intensions
-using t_e_M   = ft< t_e,   t_context >;
-using t_t_M   = ft< t_t,   t_context >;
-using t_UC_M  = ft< t_UC,  t_context >;
-using t_BC_M  = ft< t_BC,  t_context >;
-using t_TC_M  = ft< t_TC,  t_context >;
-using t_IV_M  = ft< t_IV,  t_context >;
-using t_DP_M  = ft< t_DP,  t_context >;
-using t_TV_M  = ft< t_TV,  t_context >;
-using t_Q_M   = ft< t_Q,   t_context >;
-using t_PM_M  = ft< t_PM,  t_context >;
-using t_PMM_M = ft< t_PMM, t_context >;
-using Empty_M = ft< Empty, t_context >;
+// Take t_context by const& to avoid copying the set at every call site
+using t_e_M   = std::function< t_e(const t_context&)   >;
+using t_t_M   = std::function< t_t(const t_context&)   >;
+using t_UC_M  = std::function< t_UC(const t_context&)  >;
+using t_BC_M  = std::function< t_BC(const t_context&)  >;
+using t_TC_M  = std::function< t_TC(const t_context&)  >;
+using t_IV_M  = std::function< t_IV(const t_context&)  >;
+using t_DP_M  = std::function< t_DP(const t_context&)  >;
+using t_TV_M  = std::function< t_TV(const t_context&)  >;
+using t_Q_M   = std::function< t_Q(const t_context&)   >;
+using t_PM_M  = std::function< t_PM(const t_context&)  >;
+using t_PMM_M = std::function< t_PMM(const t_context&) >;
+using Empty_M = std::function< Empty(const t_context&) >;
 
 
 // Variant type for all possible meaning types

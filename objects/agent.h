@@ -412,194 +412,81 @@ public:
 		// 	std::cout << s->toSExpression() << std::endl;
 		// }
 
+		// Compose all sentences once (compose is const on BTC)
+		std::vector<t_t_M> allMeanings;
+		allMeanings.reserve(allSentences.size());
+		for (const auto& s : allSentences) {
+			allMeanings.push_back(std::get<t_t_M>(s->compose(compositionFn)));
+		}
+
+		const std::size_t nU = allMeanings.size();
+
 		// store the produced sentences
 		typename Hyp::data_t producedSentences;
 		// utility of each produced sentence
 		std::vector<double> utilities;
-		
+
 		// loop over contexts and produce a sentence for each
 		for (auto& context : cs) {
 
-			// Since the listener can see the world
-			// except for the target feature,
-			// the possible contexts are the ones that differ
-			// from the observed one wrt what's a target.
+			// The possible contexts are assignments of target/distractor
+			// that share the same int values as the observed context.
 			t_contextVector possibleContexts = generateContextVariations(context);
 
-			// compute the utility of each sentence
-			// for the specific context
+			// Truth table: (nSentences × nContextVariations)
+			std::vector<std::vector<bool>> truthTable = computeTruthTable(
+				allMeanings, possibleContexts
+			);
+
+			// Find the index of the actual world among variations
+			std::size_t C = 0;
+			for (std::size_t i = 0; i < possibleContexts.size(); ++i) {
+				if (possibleContexts[i] == context) { C = i; break; }
+			}
+
+			// Compute per-sentence utilities
 			std::vector<double> contextUtilities;
 
-			// The sentences over which the production distribution
-			// is defined
-			t_BTC_vec sentences;
-
 			if (pragmatic) {
-
-				// Get meanings for all true sentences
-				std::vector<t_t_M> allMeanings;
-				for (auto& s : allSentences) {
-					allMeanings.push_back(std::get<t_t_M>(s->compose(compositionFn)));
-				}
-
-				// Compute truth table for all true sentences across all context variations
-				// shape: (nSentences, nContexts)
-				std::vector<std::vector<bool>> truthTable = computeTruthTable(
-					allMeanings,
-					possibleContexts
-				);
-
-				// find the index of the actual world in the possible contexts
-				std::size_t C = 0;
-				for (std::size_t i = 0; i < possibleContexts.size(); ++i) {
-					if (possibleContexts[i] == context) {
-						C = i;
-						break;
-					}
-				}
-			
-				// // For debugging purposes to check if pragmatic mode is working
-				// // manually specified truth table and context index
-				// // context index is 0
-				// C = 1;
-				// // shape: (nSentences, nContexts)
-				// std::vector<std::vector<bool>> truthTable = {
-				// 	{1, 1},
-				// 	{1, 0},
-				// 	{0, 1},
-				// };
-
-				// number of utterances
-				const std::size_t nU = truthTable.size();
-
-				// loop over utterances and compute the enriched cardinality
 				for (std::size_t u = 0; u < nU; ++u) {
 					const auto [k, keepsC] = enriched_cardinality_EBE(u, truthTable, C);
-
-					// std::cout << "Utterance: " << u << std::endl;
-					// std::cout << "Enriched cardinality: " << k << std::endl;
-					// std::cout << "Keeps context: " << keepsC << std::endl;
-					// std::cout << "Utility: " << -std::log((double)k) << std::endl;
-					// std::cout << std::endl;
-
-					// add the utility to the context utilities
 					if (keepsC) {
 						contextUtilities.push_back(-std::log((double)k));
 					} else {
-						// if the utterance is not true in the context,
-						// it has utility -infinity
 						contextUtilities.push_back(-std::numeric_limits<double>::infinity());
 					}
 				}
-				
-				// For the RSA setup, we consider all sentences
-				// and the false ones have utility 0
-				sentences = copyBTCVec(allSentences);
-
 			} else {
-
-				// Since the prior over worlds is uniform,
-				// and the messages all have equal cost,
-				// this utility is the same as the S1 utility
-				// (i.e., the RSA utility)
-				// up to a constant factor
-
-				// select the true sentences in context
-				// out of all the sentences allSentences
-				// Here we are not considering the false sentences
-				sentences = selectTrueSentences(
-						context,
-						compositionFn,
-						copyBTCVec(allSentences)
-					);
-
-				// print true sentences
-				// std::cout << "True sentences: " << std::endl;
-				// for (auto& s : trueSentences) {
-				// 	std::cout << s->toSExpression() << std::endl;
-				// }
-
-				if (sentences.size() == 0) {
-					// If the composition function cannot produce 
-					// sentences that are true of the context
-					// (e.g., randomly initialized composition function)
-					throw std::runtime_error("No data produced");
-				}
-
-				std::vector<t_t_M> meanings;
-				for (auto& s : sentences) {
-					meanings.push_back(std::get<t_t_M>(s->compose(compositionFn)));
-				}
-
-				std::vector<std::vector<bool>> truths = computeTruthTable(
-					meanings,
-					possibleContexts
-				);
-
-				std::vector<size_t> sizes;
-				// Calculate for each sentence 
-				// the number of contexts in which it is true
-				for (auto& signalT : truths) {
-					size_t nTrue = 0;
-					for (const auto& t : signalT) {
-						try {
-							nTrue = nTrue + t;
-						} catch (PresuppositionFailure& e) {
-							// if the meaning fails to compute
-							// it means that the sentence cannot be used
-							// in that context, so we just ignore it
-							// and it doesn't increase nTrue
-							continue;
-						}
+				// Literal: utility = -log(number of context variations
+				// in which the sentence is true).
+				// False sentences in the actual context get -inf.
+				for (std::size_t u = 0; u < nU; ++u) {
+					if (!truthTable[u][C]) {
+						contextUtilities.push_back(-std::numeric_limits<double>::infinity());
+						continue;
 					}
-					sizes.push_back(nTrue);
-				}
-
-				for (size_t &size : sizes) {
-					
-					// Since we are considering only a sentence
-					// that is true of the context,
-					// size cannot be 0, so we can use log
-					double utility = -std::log((double)size);
-
-					/* std::cout << "Sentence: " << s->toSExpression() << " "; */
-					/* s->printTree(lex); */
-					/* std::cout << "info: " << info << std::endl; */
-					/* std::cout << "comp: " << complexity << std::endl; */
-					/* std::cout << utility << std::endl; */
-					/* std::cout << std::endl; */
-
-					// Since this ends up as parameter to a discrete distribution
-					// that automatically normalizes, we don't need to normalize here
-					contextUtilities.push_back(utility);
+					size_t nTrue = 0;
+					for (const auto& t : truthTable[u]) { nTrue += t; }
+					contextUtilities.push_back(-std::log((double)nTrue));
 				}
 			}
 
-			// Select a single string from the distribution
-			// either the ARGMAX or SAMPLE based on informativity
-			// get the sentences and the distribution
+			// Select a single sentence
 			int index;
 			if (mode == productionMode::ARGMAX) {
 				auto max_index = std::max_element(
 					contextUtilities.begin(),
 					contextUtilities.end()
 				);
-				// get the index of the most probable sentence
-				// if there are multiple sentences with the same utility,
-				// the one with the lowest index is chosen
 				index = std::distance(contextUtilities.begin(), max_index);
 			} else if (mode == productionMode::SAMPLE) {
-				// define distribution from the utilities
 				t_discr_dist dist = t_discr_dist(contextUtilities.begin(),contextUtilities.end());
-				// sample from the distribution
 				index = dist(rng);
 			} else {
 				throw std::runtime_error("Unknown production mode");
 			}
 
-			// the string produced for the context
-			std::string producedString = sentences[index]->toSExpression();
-			// the utility of the produced string
+			std::string producedString = allSentences[index]->toSExpression();
 			double contextUtility = contextUtilities[index];
 
 			producedSentences.push_back(typename Hyp::datum_t{
@@ -961,12 +848,10 @@ public:
 				// Combine left and right children into non-leaf nodes
 				for (const auto& leftTree : leftTrees) {
 					for (const auto& rightTree : rightTrees) {
-						std::string sExpr = "( " 
-							+ leftTree->toSExpression() 
-							+ " " 
-							+ rightTree->toSExpression() 
-							+ " )";
-						trees.push_back(BTC::fromSExpression(sExpr, lex));
+						trees.push_back(std::make_unique<BTC>(
+							leftTree->copy(),
+							rightTree->copy()
+						));
 					}
 				}
 			}
