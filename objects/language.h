@@ -64,6 +64,9 @@ public:
 			bool add_PMMs,
 			bool add_Qs
 		) {
+		// target/distractor are always in the lexicon —
+		// they encode the hidden information in the communication game
+		addTargetDistractor();
 		if (add_es) addEs(cSize);
 		if (add_BFs) addBFs();
 		if (add_IVs) addIVs();
@@ -75,6 +78,7 @@ public:
 	}
 
 	LexicalSemantics(size_t cSize=5) {
+		addTargetDistractor();
 		addEs(cSize);
 		addBFs();
 		addIVs();
@@ -89,6 +93,23 @@ public:
 	// with its meaning
 	void add(std::string name, t_meaning m) {
 		interpretation_f[name] = m;
+	}
+
+	void addTargetDistractor() {
+		add( "target",
+			[](const t_context& c) -> t_IV {
+				return [](t_e x) -> t_t {
+					return std::get<1>(x);
+				};
+			}
+		);
+		add( "distractor",
+			[](const t_context& c) -> t_IV {
+				return [](t_e x) -> t_t {
+					return !std::get<1>(x);
+				};
+			}
+		);
 	}
 
 	void addEs(size_t cSize) {
@@ -243,24 +264,8 @@ public:
 			}
 		);
 
-		add( "target",
-			[](const t_context& c) -> t_IV {
-				return [](t_e x) -> t_t {
-					// check that the object is a target
-					return std::get<1>(x);
-				};
-			}
-		);
+		// target/distractor moved to addTargetDistractor() — always added
 
-		add( "distractor",
-			[](const t_context& c) -> t_IV {
-				return [](t_e x) -> t_t {
-					// check that the object is a distractor
-					return !std::get<1>(x);
-				};
-			}
-		);
-		
 		// add (common) names for the numbers 0 to 5 (inclusive)
 		// Define them as IVs so they can be used e.g., by the quantifiers
 		// for (int i = 0; i < 6; i++) {

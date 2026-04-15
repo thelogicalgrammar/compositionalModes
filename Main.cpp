@@ -42,7 +42,8 @@
 // INCLUDE ONLY THE ONE YOU NEED
 /* #include "LoTs/LoTCompFunc.h" */
 /* #include "LoTs/LoTQuantifiers.h" */
-#include "LoTs/LoTQuantifiersComposite.h"
+/* #include "LoTs/LoTQuantifiersComposite.h" */
+#include "LoTs/LoTAdjectives.h"
 // Implementation of the tradeoff analysis
 #include "objects/Tradeoff.h"
 #include "objects/CommAcc.h"
@@ -189,7 +190,7 @@ int main(int argc, char** argv) {
 
 			if (filename_quant == "") filename_quant = "quantifier_runs.txt";
 
-			estimateCommAcc<QuantsHypothesis>(
+			estimateCommAcc<ActiveHypothesis>(
 				quantifier_string,
 				nObs,
 				cSize,
@@ -216,7 +217,7 @@ int main(int argc, char** argv) {
 			/* sentences.push_back(std::move(sentence)); */
 
 
-			Agent<QuantsHypothesis> agent = Agent<QuantsHypothesis>(
+			Agent<ActiveHypothesis> agent = Agent<ActiveHypothesis>(
 				"1:%s | %s | %s | %s;3:( %s %s );7:( %s %s );6:%s.Q;0:X;4:%s.L;0:X;4:%s.R;0:X;8:( intEq %s %s );10:( cardinality %s %s );9:%s.R;0:X;2:%s.c;0:X;10:( cardinality %s %s );9:%s.R;0:X;2:%s.c;0:X;8:( intGt %s %s );10:( cardinality %s %s );9:%s.L;0:X;2:%s.c;0:X;10:1;8:( intEq %s %s );10:( cardinality %s %s );9:%s.R;0:X;2:%s.c;0:X;10:( cardinality %s %s );9:( setminus %s %s );9:%s.L;0:X;9:%s.R;0:X;2:%s.c;0:X"
 			);
 
@@ -258,7 +259,7 @@ int main(int argc, char** argv) {
 			j["pragmatic"] 			= pragmatic;
 			j["exclude_empty_qs"] 	= exclude_empty_qs;
 			j["steps"] 				= FleetArgs::steps;
-			j["num_quants"] 		= NUM_QUANTS;
+			j["num_learned_items"] 	= num_learned_items;
 			jfile << j.dump() << std::endl;
 
 			std::filesystem::path datafilepath = dir / "data.txt";
@@ -266,8 +267,8 @@ int main(int argc, char** argv) {
 
 			initializeHypCSV(hypfilepath);
 
-			/* TopN<QuantsHypothesis> results = */ 
-			runTradeoffAnalysis<QuantsHypothesis>(
+			/* TopN<ActiveHypothesis> results = */ 
+			runTradeoffAnalysis<ActiveHypothesis>(
 					// number of samples to estimate communicative accuracy
 					nObs,
 					// size of contexts
@@ -293,7 +294,7 @@ int main(int argc, char** argv) {
 			/* 		+ ".json" */
 			/* 	); */
 
-			/* saveResults<QuantsHypothesis>(filepath, results); */
+			/* saveResults<ActiveHypothesis>(filepath, results); */
 
 			break;
 		}
@@ -302,7 +303,7 @@ int main(int argc, char** argv) {
 
 			// NOT IMPLEMENTED YET
 
-			// QuantsHypothesis::setParams(
+			// ActiveHypothesis::setParams(
 			// 	nObs,
 			// 	cSize,
 			// 	likelihoodWeight,
@@ -313,7 +314,7 @@ int main(int argc, char** argv) {
 			// 	exclude_empty_qs
 			// );
 
-			// Agent<QuantsHypothesis> agent{quantifier_string};
+			// Agent<ActiveHypothesis> agent{quantifier_string};
 
 			// // get everything from the trueHyp
 			// LexicalSemantics lex 		= agent.getHypothesis().getLexicon();

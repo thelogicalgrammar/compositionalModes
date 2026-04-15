@@ -520,3 +520,7 @@ public:
 		return this->likelihood;
 	}
 };
+
+// Common aliases so Main.cpp only needs to change the #include
+using ActiveHypothesis = QuantsHypothesis;
+static constexpr size_t num_learned_items = num_quants;

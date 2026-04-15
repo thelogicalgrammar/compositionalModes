@@ -85,12 +85,10 @@ std::vector<std::vector<bool>> computeTruthTable(
 				try {
 					signalTruths.push_back(meaning(context));
 				} catch (PresuppositionFailure& e) {
-					// if the meaning fails to compute
-					// it means that the context is not
-					// compatible with the meaning
-					// so we just ignore it
-					// and it doesn't increase nTrue
-					continue;
+					// Presupposition failure means the sentence
+					// is undefined in this context — treat as false
+					// to keep truth table rows aligned with context indices
+					signalTruths.push_back(false);
 				}
 			}
 			truths.push_back(signalTruths);
@@ -399,18 +397,6 @@ public:
 				terminalsMap,
 				searchDepth
 			);
-
-		// print lexicon using the getNames function
-		// std::cout << "Lexicon: " << std::endl;
-		// for (auto& word : lex.getNames()) {
-		// 	std::cout << word << std::endl;
-		// }
-
-		// print sentences
-		// std::cout << "All sentences: " << std::endl;
-		// for (auto& s : allSentences) {
-		// 	std::cout << s->toSExpression() << std::endl;
-		// }
 
 		// Compose all sentences once (compose is const on BTC)
 		std::vector<t_t_M> allMeanings;
