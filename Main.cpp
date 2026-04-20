@@ -81,9 +81,9 @@ int main(int argc, char** argv) {
 	bool pragmatic 			= false;
 	double pTarget 			= 0.5;
 	std::string fname 		= "./data/tradeoff/";
-	bool exclude_empty_qs 	= false;
-	std::string quantifier_string = "";
-	std::string filename_quant = "";
+	bool exclude_empty 	= false;
+	std::string hypothesis_string = "";
+	std::string filename_hyp = "";
 	std::string simType = "";
 
 	fleet.add_option<size_t>(
@@ -122,19 +122,19 @@ int main(int argc, char** argv) {
 		"Folder name for saving runs"
 	);
 	fleet.add_option<bool>(
-		"--exclude-empty-qs",
-		exclude_empty_qs,
-		"Whether to exclude systems containing empty quantifiers as possible hypotheses"
+		"--exclude-empty",
+		exclude_empty,
+		"Whether to exclude systems containing empty signals as possible hypotheses (what emptiness means is defined in the respective hypothesis.h)"
 	);
 	fleet.add_option<std::string>(
-		"--quantifier-string",
-		quantifier_string,
-		"String representation of the quantifiers if mode is MEASURECOMMUNICATION"
+		"--hypothesis-string",
+		hypothesis_string,
+		"String representation of the hypothesis if mode is MEASURECOMMUNICATION"
 	);
 	fleet.add_option<std::string>(
-		"--filename_quant",
-		filename_quant,
-		"Filename for saving quantifier runs if MEASURECOMMUNICATION"
+		"--filename-hyp",
+		filename_hyp,
+		"Filename for saving hypothesis runs if MEASURECOMMUNICATION"
 	);
 	fleet.add_option<std::string>(
 		"--simtype",
@@ -187,20 +187,20 @@ int main(int argc, char** argv) {
 		
 		case SimulationType::MEASURECOMMUNICATION: {
 
-			if (quantifier_string == "") {
-				throw std::runtime_error("Quantifier string is required for simulation type MEASURECOMMUNICATION");
+			if (hypothesis_string == "") {
+				throw std::runtime_error("Hypothesis string is required for simulation type MEASURECOMMUNICATION");
 			}
 
-			if (filename_quant == "") filename_quant = "quantifier_runs.txt";
+			if (filename_hyp == "") filename_hyp = "hypothesis_runs.txt";
 
 			estimateCommAcc<ActiveHypothesis>(
-				quantifier_string,
+				hypothesis_string,
 				nObs,
 				cSize,
 				likelihoodWeight,
 				pTarget,
 				rng,
-				"./data/individual_systems/" + filename_quant + ".txt",
+				"./data/individual_systems/" + filename_hyp + ".txt",
 				searchDepth,
 				pragmatic
 			);
@@ -260,7 +260,7 @@ int main(int argc, char** argv) {
 			j["likelihoodweight"] 	= likelihoodWeight;
 			j["searchdepth"] 		= searchDepth;
 			j["pragmatic"] 			= pragmatic;
-			j["exclude_empty_qs"] 	= exclude_empty_qs;
+			j["exclude_empty"] 	= exclude_empty;
 			j["steps"] 				= FleetArgs::steps;
 			j["num_learned_items"] 	= num_learned_items;
 			jfile << j.dump() << std::endl;
@@ -286,7 +286,7 @@ int main(int argc, char** argv) {
 					pragmatic,
 					datafilepath,
 					hypfilepath,
-					exclude_empty_qs
+					exclude_empty
 				);
 
 			// save results to file with various params
@@ -314,10 +314,10 @@ int main(int argc, char** argv) {
 			// 	searchDepth,
 			// 	pTarget,
 			// 	pragmatic,
-			// 	exclude_empty_qs
+			// 	exclude_empty
 			// );
 
-			// Agent<ActiveHypothesis> agent{quantifier_string};
+			// Agent<ActiveHypothesis> agent{hypothesis_string};
 
 			// // get everything from the trueHyp
 			// LexicalSemantics lex 		= agent.getHypothesis().getLexicon();

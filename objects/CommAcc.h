@@ -22,11 +22,11 @@ void estimateCommAcc(
 		const std::string& fname,
 		size_t searchDepth = 2,
 		bool pragmatic = false,
-		bool exclude_empty_qs = false
+		bool exclude_empty = false
 	){
 	// Make sure that this is the same as compute_likelihood
 
-	if (exclude_empty_qs) {
+	if (exclude_empty) {
 		// split the hypothesis into the composition function and the quantifiers
 		auto parts = split(stringRepr, '|');
 		// get the quantifiers
@@ -51,7 +51,7 @@ void estimateCommAcc(
 		searchDepth,
 		pTarget,
 		pragmatic,
-		exclude_empty_qs
+		exclude_empty
 	);
 
 	// store runs 

@@ -3,8 +3,7 @@
 #SBATCH -p rome
 #SBATCH -t 100:00:00
 
-# Quantifiers case study — requires the `quantifiers` case study to be
-# selected via the includes in Main.cpp.
+# Quantifiers case study — selected at build time via `make CASESTUDY=quantifiers` below.
 
 module load 2022
 module load Eigen/3.4.0-GCCcore-11.3.0
@@ -14,12 +13,12 @@ module load parallel/20220722-GCCcore-11.3.0
 DEFAULTLIK=40
 DEFAULTNUMQUANTS=3
 DEFAULTPRAGMATIC=1
-DEFAULT_EXCLUDE_EMPTY_QS=0
+DEFAULT_EXCLUDE_EMPTY=0
 
 ARG1=${1:-$DEFAULTLIK}
 ARG2=${2:-$DEFAULTNUMQUANTS}
 ARG3=${3:-$DEFAULTPRAGMATIC}
-ARG4=${4:-$DEFAULT_EXCLUDE_EMPTY_QS}
+ARG4=${4:-$DEFAULT_EXCLUDE_EMPTY}
 
 # Assuming sbatch is run from case_studies/quantifiers/server/snellius,
 # jump 4 levels up to the compositionalModes root.
@@ -35,6 +34,6 @@ ID=$(date +"%Y%m%d_%H%M%S_%3N")
 	--searchdepth		2		 		\
 	--fname 			"data/${ID}"	\
 	--pragmatic			$ARG3			\
-	--exclude-empty-qs	$ARG4			\
+	--exclude-empty		$ARG4			\
 	--ct				16				\
 	--simtype			"TRADEOFF"

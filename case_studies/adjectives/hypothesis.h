@@ -391,7 +391,7 @@ public:
 	                      const size_t searchDepth,
 	                      const double pTarget,
 	                      const bool pragmatic,
-	                      const bool exclude_empty_qs) {
+	                      const bool exclude_empty) {
 		AdjsHypothesis::nObs = nObs;
 		AdjsHypothesis::cSize = cSize;
 		AdjsHypothesis::likelihoodWeight = likelihoodWeight;
@@ -399,7 +399,7 @@ public:
 		AdjsHypothesis::searchDepth = searchDepth;
 		AdjsHypothesis::pTarget = pTarget;
 		AdjsHypothesis::pragmatic = pragmatic;
-		AdjsHypothesis::exclude_empty_adjs = exclude_empty_qs;
+		AdjsHypothesis::exclude_empty_adjs = exclude_empty;
 	}
 
 	// ---- Constructors ----

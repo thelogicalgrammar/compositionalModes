@@ -277,7 +277,7 @@ public:
 	                      const size_t searchDepth,
 	                      const double pTarget,
 	                      const bool pragmatic,
-	                      const bool exclude_empty_qs) {
+	                      const bool exclude_empty) {
 		QuantsHypothesis::nObs = nObs;
 		QuantsHypothesis::cSize = cSize;
 		QuantsHypothesis::likelihoodWeight = likelihoodWeight;
@@ -285,7 +285,7 @@ public:
 		QuantsHypothesis::searchDepth = searchDepth;
 		QuantsHypothesis::pTarget = pTarget;
 		QuantsHypothesis::pragmatic = pragmatic;
-		QuantsHypothesis::exclude_empty_qs = exclude_empty_qs;
+		QuantsHypothesis::exclude_empty_qs = exclude_empty;
 	}
 
 	// ---- Constructors ----

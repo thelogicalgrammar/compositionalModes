@@ -620,7 +620,7 @@ public:
 						  const size_t searchDepth,
 						  const double pTarget,
 						  const bool pragmatic,
-						  const bool exclude_empty_qs) {
+						  const bool exclude_empty) {
 
 		// Set the parameters for the language hypothesis
 		// This is a static method of the LangHyp class
@@ -632,7 +632,7 @@ public:
 		QuantsHypothesis::searchDepth = searchDepth;
 		QuantsHypothesis::pTarget = pTarget;
 		QuantsHypothesis::pragmatic = pragmatic;
-		QuantsHypothesis::exclude_empty_qs = exclude_empty_qs;
+		QuantsHypothesis::exclude_empty_qs = exclude_empty;
 	}
 
 	QuantsHypothesis() : Super () {
