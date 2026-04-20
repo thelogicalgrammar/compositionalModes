@@ -11,7 +11,7 @@ module load binutils/2.38-GCCcore-11.3.0
 module load parallel/20220722-GCCcore-11.3.0
 
 DEFAULTLIK=40
-DEFAULTNUMADJS=3
+DEFAULTNUMADJS=5
 DEFAULTPRAGMATIC=1
 DEFAULT_EXCLUDE_EMPTY=0
 
@@ -27,7 +27,8 @@ make CASESTUDY=adjectives EXTRA_FLAGS="-DNUM_ADJS=$ARG2"
 
 ID=$(date +"%Y%m%d_%H%M%S_%3N")
 ./main \
-	--steps 			200000 	 		\
+	--steps 			2000 	 		\
+	--ptarget			0.2				\
 	--nobs 				500		 	 	\
 	--csize 			5 		 		\
 	--likelihoodweight 	$ARG1	 		\

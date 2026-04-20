@@ -36,14 +36,14 @@ static constexpr size_t num_adjs = NUM_ADJS;
 // grammar from mixing dimension indices with arithmetic operands).
 using t_dim = size_t;
 
-// Measure function: entity → float (the adjective's degree output)
+// Measure function: entity to float (the adjective's degree output)
 using t_measure = std::function<float(t_e)>;
 
-// Adjective grammar: (entity, context) → float
+// Adjective grammar: (entity, context) to float
 using t_adj_input = std::tuple<t_e, t_context>;
 using t_adj_datum = defaultdatum_t<t_adj_input, float>;
 
-// Composition grammar (POS): (measure_fn, entity, context) → bool
+// Composition grammar (POS): (measure_fn, entity, context) to bool
 using t_adj_comp_input = std::tuple<t_measure, t_e, t_context>;
 using t_adj_comp_datum = defaultdatum_t<t_adj_comp_input, t_t>;
 
