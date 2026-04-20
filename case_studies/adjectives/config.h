@@ -7,9 +7,7 @@
 // dimensions (think "height, weight, temperature, ..."). Different
 // adjectives can select different dimensions via the LoT grammar.
 //
-// std::array<float, N> is used rather than std::tuple<float,...,float>
-// because runtime-indexed access (arr[d]) is what the DSL needs.
-// Operationally it's the same "tuple of floats" but much easier to use.
+// std::array<float, N> is used rather than e.g., std::tuple<float,...,float>
 
 #include <random>
 #include <string>
@@ -17,7 +15,7 @@
 #include <sstream>
 
 #ifndef NUM_DIMS
-#define NUM_DIMS 3   // override with: -DNUM_DIMS=N
+#define NUM_DIMS 5   // override with: -DNUM_DIMS=N
 #endif
 static constexpr size_t num_dims = NUM_DIMS;
 

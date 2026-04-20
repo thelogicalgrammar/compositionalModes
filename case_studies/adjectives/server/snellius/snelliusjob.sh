@@ -10,7 +10,7 @@ module load Eigen/3.4.0-GCCcore-11.3.0
 module load binutils/2.38-GCCcore-11.3.0
 module load parallel/20220722-GCCcore-11.3.0
 
-DEFAULTLIK=40
+DEFAULTLIK=60
 DEFAULTNUMADJS=5
 DEFAULTPRAGMATIC=1
 DEFAULT_EXCLUDE_EMPTY=0
