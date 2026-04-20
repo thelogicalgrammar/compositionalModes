@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../_shared/int_lexicon.h"
+
 #ifndef NUM_QUANTS
 #define NUM_QUANTS 3
 #endif
@@ -375,6 +377,9 @@ public:
 			cSize, add_es, add_BFs, add_IVs, add_TVs,
 			add_DPs, add_PMs, add_PMMs, add_Qs
 		};
+		// Int-specific predicates (even, prime, gt, equal) —
+		// content-agnostic language.h no longer provides them.
+		addIntLexicon(lex);
 		for (size_t i = 0; i < num_quants; i++) {
 			lex.add("Q" + std::to_string(i + 1), q_n(i));
 		}

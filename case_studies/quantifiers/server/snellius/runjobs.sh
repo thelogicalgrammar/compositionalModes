@@ -3,19 +3,15 @@
 # NOTE: running ./runjobs.sh was giving me problems
 # So I just did it manually for the different settings
 
-# This is a parameter sweep over 
-#   1. the likelihood weight
-#   2. the number of quantifiers
-#   3. the pragmatic setting
+# Parameter sweep over:
+#   1. likelihood weight
+#   2. number of quantifiers
+#   3. pragmatic setting
 
-# run once for literal and once for pragmatic
 # for k in 0 1; do
-#     # run jobs for 20, 30, 40 likelihood weight
 #     for j in 20 30 40; do
-#         # run jobs for 2, 3, 4, 5 quantifiers
 #         for i in 2 3 4 5; do
 #             sbatch snelliusjob.sh $j $i $k
-#             # wait 1 second
 #             sleep 1
 #         done
 #     done

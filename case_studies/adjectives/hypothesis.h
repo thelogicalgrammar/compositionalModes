@@ -9,12 +9,13 @@ static constexpr size_t num_adjs = NUM_ADJS;
 // ============================================================
 // Gradable Adjectives case study (with co-learned POS)
 //
-// Learns N adjective MEASURE functions and one shared
-// composition function (the POS morpheme / standard).
+// Entities have NUM_DIMS float-valued dimensions (see config.h).
+// Each adjective selects and combines dimensions into a single
+// degree; a shared POS morpheme maps that degree to truth.
 //
-// Each adjective LoT program: (entity, context) → int
-//   Produces a DEGREE (what dimension is being measured).
-//   DSL: degree(x), context aggregates, arithmetic.
+// Each adjective LoT program: (entity, context) → float
+//   Produces a DEGREE along the adjective's chosen scale.
+//   DSL: dim(d, x), per-dim context aggregates, arithmetic.
 //
 // Shared composition function: (measure_fn, entity, context) → bool
 //   Defines the STANDARD (how degrees map to truth values).
@@ -31,12 +32,16 @@ static constexpr size_t num_adjs = NUM_ADJS;
 // Types
 // ============================================================
 
-// Measure function: entity → int (the adjective's degree output)
-using t_measure = std::function<int(t_e)>;
+// Dimension index (keeping it distinct from other ints keeps the
+// grammar from mixing dimension indices with arithmetic operands).
+using t_dim = size_t;
 
-// Adjective grammar: (entity, context) → int
+// Measure function: entity → float (the adjective's degree output)
+using t_measure = std::function<float(t_e)>;
+
+// Adjective grammar: (entity, context) → float
 using t_adj_input = std::tuple<t_e, t_context>;
-using t_adj_datum = defaultdatum_t<t_adj_input, int>;
+using t_adj_datum = defaultdatum_t<t_adj_input, float>;
 
 // Composition grammar (POS): (measure_fn, entity, context) → bool
 using t_adj_comp_input = std::tuple<t_measure, t_e, t_context>;
@@ -70,32 +75,44 @@ inline constexpr bool accepts_arg_v = accepts_arg<T, U>::value;
 namespace AdjMeasureDSL {
 
 	// Input accessors
-	auto x_ = +[](t_adj_input i) -> t_e      { return std::get<0>(i); };
+	auto x_ = +[](t_adj_input i) -> t_e       { return std::get<0>(i); };
 	auto c_ = +[](t_adj_input i) -> t_context { return std::get<1>(i); };
 
-	// Degree extraction
-	auto degree = +[](t_e e) -> int { return std::get<0>(e); };
-
-	// Context aggregates (raw entity degrees)
-	auto maxDeg = +[](t_context c) -> int {
-		int m = std::numeric_limits<int>::min();
-		for (const auto& e : c) m = std::max(m, std::get<0>(e));
-		return m;
-	};
-	auto minDeg = +[](t_context c) -> int {
-		int m = std::numeric_limits<int>::max();
-		for (const auto& e : c) m = std::min(m, std::get<0>(e));
-		return m;
-	};
-	auto meanDeg = +[](t_context c) -> int {
-		int sum = 0;
-		for (const auto& e : c) sum += std::get<0>(e);
-		return sum / (int)c.size();
+	// Pick one dimension of an entity's content vector.
+	// Grammar-produced d is always in [0, num_dims), but we clamp
+	// for safety.
+	auto dim = +[](t_dim d, t_e e) -> float {
+		return content(e)[d < num_dims ? d : 0];
 	};
 
-	// Arithmetic
-	auto plus  = +[](int i1, int i2) -> int { return i1 + i2; };
-	auto minus = +[](int i1, int i2) -> int { return i1 - i2; };
+	// Context aggregates over a specified dimension
+	auto maxDim = +[](t_dim d, t_context c) -> float {
+		size_t di = d < num_dims ? d : 0;
+		float m = std::numeric_limits<float>::lowest();
+		for (const auto& e : c) m = std::max(m, content(e)[di]);
+		return m;
+	};
+	auto minDim = +[](t_dim d, t_context c) -> float {
+		size_t di = d < num_dims ? d : 0;
+		float m = std::numeric_limits<float>::max();
+		for (const auto& e : c) m = std::min(m, content(e)[di]);
+		return m;
+	};
+	auto meanDim = +[](t_dim d, t_context c) -> float {
+		size_t di = d < num_dims ? d : 0;
+		float sum = 0.0f;
+		for (const auto& e : c) sum += content(e)[di];
+		return sum / (float)c.size();
+	};
+
+	// Arithmetic on floats
+	auto plus  = +[](float a, float b) -> float { return a + b; };
+	auto minus = +[](float a, float b) -> float { return a - b; };
+	auto times = +[](float a, float b) -> float { return a * b; };
+	auto neg   = +[](float a) -> float          { return -a; };
+	auto absF  = +[](float a) -> float          { return a < 0 ? -a : a; };
+	auto maxF  = +[](float a, float b) -> float { return a > b ? a : b; };
+	auto minF  = +[](float a, float b) -> float { return a < b ? a : b; };
 }
 
 // ============================================================
@@ -107,38 +124,43 @@ namespace AdjCompDSL {
 	// Input accessors
 	auto adj_ = +[](t_adj_comp_input i) -> t_measure { return std::get<0>(i); };
 	auto x_   = +[](t_adj_comp_input i) -> t_e       { return std::get<1>(i); };
-	auto c_   = +[](t_adj_comp_input i) -> t_context  { return std::get<2>(i); };
+	auto c_   = +[](t_adj_comp_input i) -> t_context { return std::get<2>(i); };
 
 	// Apply the adjective measure to an entity
-	auto applyAdj = +[](t_measure adj, t_e x) -> int { return adj(x); };
+	auto applyAdj = +[](t_measure adj, t_e x) -> float { return adj(x); };
 
 	// Adjective-relative context statistics
-	auto maxAdj = +[](t_measure adj, t_context c) -> int {
-		int m = std::numeric_limits<int>::min();
+	auto maxAdj = +[](t_measure adj, t_context c) -> float {
+		float m = std::numeric_limits<float>::lowest();
 		for (const auto& e : c) m = std::max(m, adj(e));
 		return m;
 	};
-	auto minAdj = +[](t_measure adj, t_context c) -> int {
-		int m = std::numeric_limits<int>::max();
+	auto minAdj = +[](t_measure adj, t_context c) -> float {
+		float m = std::numeric_limits<float>::max();
 		for (const auto& e : c) m = std::min(m, adj(e));
 		return m;
 	};
-	auto meanAdj = +[](t_measure adj, t_context c) -> int {
-		int sum = 0;
+	auto meanAdj = +[](t_measure adj, t_context c) -> float {
+		float sum = 0.0f;
 		for (const auto& e : c) sum += adj(e);
-		return sum / (int)c.size();
+		return sum / (float)c.size();
 	};
 
-	// Raw entity degree (accessible without the adjective)
-	auto degree = +[](t_e e) -> int { return std::get<0>(e); };
+	// Float comparisons. Exact equality is OK here because the floats
+	// being compared come from the same adj applied to the same
+	// context — no rounding paths diverge.
+	auto fltGt  = +[](float a, float b) -> t_t { return a >  b; };
+	auto fltGte = +[](float a, float b) -> t_t { return a >= b; };
+	auto fltEq  = +[](float a, float b) -> t_t { return a == b; };
 
-	// Integer comparisons
-	auto intGt = +[](int i1, int i2) -> t_t { return i1 > i2; };
-	auto intEq = +[](int i1, int i2) -> t_t { return i1 == i2; };
-
-	// Arithmetic
-	auto plus  = +[](int i1, int i2) -> int { return i1 + i2; };
-	auto minus = +[](int i1, int i2) -> int { return i1 - i2; };
+	// Arithmetic on floats
+	auto plus  = +[](float a, float b) -> float { return a + b; };
+	auto minus = +[](float a, float b) -> float { return a - b; };
+	auto times = +[](float a, float b) -> float { return a * b; };
+	auto neg   = +[](float a) -> float          { return -a; };
+	auto absF  = +[](float a) -> float          { return a < 0 ? -a : a; };
+	auto maxF  = +[](float a, float b) -> float { return a > b ? a : b; };
+	auto minF  = +[](float a, float b) -> float { return a < b ? a : b; };
 
 	// Boolean
 	auto not_ = +[](t_t b) -> t_t { return !b; };
@@ -151,13 +173,13 @@ namespace AdjCompDSL {
 // ============================================================
 
 class AdjMeasureGrammar : public Grammar<
-		t_adj_input, int,
-		t_adj_input, int, t_e, t_context
+		t_adj_input, float,
+		t_adj_input, float, t_e, t_dim, t_context
 	>, public Singleton<AdjMeasureGrammar> {
 
 	using Super = Grammar<
-		t_adj_input, int,
-		t_adj_input, int, t_e, t_context>;
+		t_adj_input, float,
+		t_adj_input, float, t_e, t_dim, t_context>;
 	using Super::Super;
 
 public:
@@ -171,21 +193,47 @@ public:
 		// -> t_context
 		add("%s.c",                   c_,             1);
 
-		// -> int (degree of entity)
-		add("( degree %s )",          degree,         10);
+		// -> float (pick dimension d of entity)
+		add("( dim %s %s )",          dim,            10);
 
-		// -> int (context aggregates)
-		add("( maxDeg %s )",          maxDeg,          5);
-		add("( minDeg %s )",          minDeg,          5);
-		add("( meanDeg %s )",         meanDeg,         5);
+		// -> float (per-dimension context aggregates)
+		add("( maxDim %s %s )",       maxDim,          5);
+		add("( minDim %s %s )",       minDim,          5);
+		add("( meanDim %s %s )",      meanDim,         5);
 
-		// -> int (arithmetic)
+		// -> float (arithmetic)
 		add("( + %s %s )",            plus,            1);
 		add("( - %s %s )",            minus,           1);
+		add("( * %s %s )",            times,           1);
+		add("( neg %s )",             neg,             1);
+		add("( abs %s )",             absF,            1);
+		add("( maxF %s %s )",         maxF,            1);
+		add("( minF %s %s )",         minF,            1);
 
-		// -> int (constants)
-		add_terminal("0",             0,              10);
-		add_terminal("1",             1,              10);
+		// -> float (constants)
+		add_terminal("0.0",           0.0f,           10);
+		add_terminal("-1.0",          -1.0f,           5);
+		// Fine-grained constants 0.1 to 1.0 with exponentially
+		// decreasing weights, matching the POS grammar.
+		// Enables non-monotonic convex categories centered at
+		// arbitrary points (e.g., abs(dim - 0.3) for a category
+		// centered at the 62nd percentile).
+		{
+			const char* names[] = {"0.1","0.2","0.3","0.4","0.5",
+			                       "0.6","0.7","0.8","0.9","1.0"};
+			for (int i = 0; i < 10; i++) {
+				float v = (i + 1) * 0.1f;
+				double w = 10.0 * std::exp(-2.3 * v);
+				add_terminal(names[i], v, w);
+			}
+		}
+
+		// -> t_dim (dimension index terminals)
+		for (size_t i = 0; i < num_dims; i++) {
+			add_terminal("d" + std::to_string(i),
+			             t_dim(i),
+			             10);
+		}
 	}
 } adj_measure_grammar;
 
@@ -195,12 +243,12 @@ public:
 
 class AdjCompGrammar : public Grammar<
 		t_adj_comp_input, t_t,
-		t_adj_comp_input, t_t, t_measure, t_e, int, t_context
+		t_adj_comp_input, t_t, t_measure, t_e, float, t_context
 	>, public Singleton<AdjCompGrammar> {
 
 	using Super = Grammar<
 		t_adj_comp_input, t_t,
-		t_adj_comp_input, t_t, t_measure, t_e, int, t_context>;
+		t_adj_comp_input, t_t, t_measure, t_e, float, t_context>;
 	using Super::Super;
 
 public:
@@ -216,28 +264,44 @@ public:
 		// -> t_context
 		add("%s.c",                   c_,             1);
 
-		// -> int (apply adjective to entity)
+		// -> float (apply adjective to entity)
 		add("( apply %s %s )",        applyAdj,      10);
 
-		// -> int (adjective-relative context statistics)
+		// -> float (adjective-relative context statistics)
 		add("( maxAdj %s %s )",       maxAdj,         5);
 		add("( minAdj %s %s )",       minAdj,         5);
 		add("( meanAdj %s %s )",      meanAdj,        5);
 
-		// -> int (raw degree, independent of adjective)
-		add("( degree %s )",          degree,          5);
-
-		// -> int (arithmetic)
+		// -> float (arithmetic)
 		add("( + %s %s )",            plus,            1);
 		add("( - %s %s )",            minus,           1);
+		add("( * %s %s )",            times,           1);
+		add("( neg %s )",             neg,             1);
+		add("( abs %s )",             absF,            1);
+		add("( maxF %s %s )",         maxF,            1);
+		add("( minF %s %s )",         minF,            1);
 
-		// -> int (constants)
-		add_terminal("0",             0,              10);
-		add_terminal("1",             1,              10);
+		// -> float (constants)
+		add_terminal("0.0",           0.0f,           10);
+		add_terminal("-1.0",          -1.0f,           5);
+		// Positive thresholds 0.1 to 1.0 with exponentially
+		// decreasing weights: w = 10 * exp(-2.3 * v).
+		// Encodes a prior preference for thresholds near the
+		// population mean (0) over extreme thresholds (1 sd+).
+		{
+			const char* names[] = {"0.1","0.2","0.3","0.4","0.5",
+			                       "0.6","0.7","0.8","0.9","1.0"};
+			for (int i = 0; i < 10; i++) {
+				float v = (i + 1) * 0.1f;
+				double w = 10.0 * std::exp(-2.3 * v);
+				add_terminal(names[i], v, w);
+			}
+		}
 
-		// -> t_t (integer comparisons)
-		add("( intGt %s %s )",        intGt,          10);
-		add("( intEq %s %s )",        intEq,          10);
+		// -> t_t (float comparisons)
+		add("( fltGt %s %s )",        fltGt,          10);
+		add("( fltGte %s %s )",       fltGte,         10);
+		add("( fltEq %s %s )",        fltEq,          10);
 
 		// -> t_t (boolean)
 		add("( not %s )",             not_,            1);
@@ -254,10 +318,10 @@ public:
 // ============================================================
 
 class InnerAdjMeasureHyp : public DeterministicLOTHypothesis<
-		InnerAdjMeasureHyp, t_adj_input, int,
+		InnerAdjMeasureHyp, t_adj_input, float,
 		AdjMeasureGrammar, &adj_measure_grammar, t_adj_datum> {
 	using Super = DeterministicLOTHypothesis<
-		InnerAdjMeasureHyp, t_adj_input, int,
+		InnerAdjMeasureHyp, t_adj_input, float,
 		AdjMeasureGrammar, &adj_measure_grammar, t_adj_datum>;
 public:
 	using Super::Super;
@@ -396,14 +460,14 @@ public:
 	}
 
 	// ---- Adjective meanings ----
-	// Each adjective's measure program produces a degree (int).
+	// Each adjective's measure program produces a degree (float).
 	// The shared composition program (POS) maps (degree, context) → bool.
 	// The result is a standard t_IV_M predicate.
 
 	t_meaning adj_n(size_t i) const {
 		return t_meaning([this, i](t_context c) -> t_IV {
 			// Build the measure function for this adjective in this context
-			t_measure measure = [this, i, c](t_e x) -> int {
+			t_measure measure = [this, i, c](t_e x) -> float {
 				return adjs[i].call(std::make_tuple(x, c));
 			};
 			// Return predicate: apply POS to (measure, entity, context)

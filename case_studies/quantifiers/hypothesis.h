@@ -1,5 +1,7 @@
 # pragma once
 
+#include "../_shared/int_lexicon.h"
+
 #ifndef NUM_QUANTS
 #define NUM_QUANTS 3   // override with: -DNUM_QUANTS=4 (etc.)
 #endif
@@ -843,14 +845,21 @@ public:
 			add_Qs
 		};
 
-		// The quantifiers are part 
+		// Int-specific predicates (even, prime, gt, equal) —
+		// content-agnostic language.h no longer provides them.
+		addIntLexicon(lexSem);
+
+		// The quantifiers are part
 		// of the agents' language
 		for (size_t i = 0; i < num_quants; i++) {
 			lexSem.add("Q" + std::to_string(i+1), q_n(i));
 		}
 		return lexSem;
-	
+
 	}
-	
+
 };
 
+// Common aliases so Main.cpp only needs to change the case study includes
+using ActiveHypothesis = QuantsHypothesis;
+static constexpr size_t num_learned_items = num_quants;

@@ -3,35 +3,29 @@
 #SBATCH -p rome
 #SBATCH -t 100:00:00
 
-# Run this code in a file with source setup.sh
+# Quantifiers-composite case study — requires the `quantifiers_composite`
+# case study to be selected via the includes in Main.cpp.
+
 module load 2022
-# Turns out that g++-11 works for compiling the models
 module load Eigen/3.4.0-GCCcore-11.3.0
-# This to run "make debug" so you can use --gdwarf-5
 module load binutils/2.38-GCCcore-11.3.0
-# To run in parallel
 module load parallel/20220722-GCCcore-11.3.0
 
-# default values
 DEFAULTLIK=40
 DEFAULTNUMQUANTS=3
 DEFAULTPRAGMATIC=1
 DEFAULT_EXCLUDE_EMPTY_QS=0
 
-# optional argument for likweights
 ARG1=${1:-$DEFAULTLIK}
-# optional argument for num_quants
 ARG2=${2:-$DEFAULTNUMQUANTS}
-# optional argument for pragmatic
 ARG3=${3:-$DEFAULTPRAGMATIC}
-# optional argument for exclude_empty_qs
 ARG4=${4:-$DEFAULT_EXCLUDE_EMPTY_QS}
 
-# Compile script (assuming sbatch is run from the ./server/snellius directory)
-cd ../../
-make EXTRA_FLAGS="-DNUM_QUANTS=$ARG2"
+# Assuming sbatch is run from case_studies/quantifiers_composite/server/snellius,
+# jump 4 levels up to the compositionalModes root.
+cd ../../../../
+make CASESTUDY=quantifiers_composite EXTRA_FLAGS="-DNUM_QUANTS=$ARG2"
 
-# ID is a string with current time up to milliseconds
 ID=$(date +"%Y%m%d_%H%M%S_%3N")
 ./main \
 	--steps 			200000 	 		\
@@ -44,5 +38,3 @@ ID=$(date +"%Y%m%d_%H%M%S_%3N")
 	--exclude-empty-qs	$ARG4			\
 	--ct				16				\
 	--simtype			"TRADEOFF"
-
-# ./main --steps 10000 --nobs 5 --csize 5 --likelihoodweight 30 --searchdepth 2 --fname "data/10" --ct 16

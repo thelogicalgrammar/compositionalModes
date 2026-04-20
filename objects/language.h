@@ -99,14 +99,14 @@ public:
 		add( "target",
 			[](const t_context& c) -> t_IV {
 				return [](t_e x) -> t_t {
-					return std::get<1>(x);
+					return is_target(x);
 				};
 			}
 		);
 		add( "distractor",
 			[](const t_context& c) -> t_IV {
 				return [](t_e x) -> t_t {
-					return !std::get<1>(x);
+					return !is_target(x);
 				};
 			}
 		);
@@ -209,56 +209,17 @@ public:
 	}
 
 	// These are type <s, <e, t>>
+	// Content-agnostic IVs. Content-specific ones (e.g., even, prime
+	// for int content) live in case_studies/_shared/ or the case study
+	// itself and are added by the hypothesis's getLexicon().
 	void addIVs() {
 
 		// This matches every object in the domain.
 		// It can used e.g., in combination with a quantifier
 		// like "every" to mean "everything"
-		add( "thing", 
+		add( "thing",
 			[](const t_context& c) -> t_IV {
 				return [](t_e x) -> t_t {
-					return true;
-				};
-			}
-		);
-
-		// add( "positive",
-		// 	[](const t_context& c) -> t_IV {
-		// 		return [](t_e x) -> t_t {
-		// 			int o = std::get<0>(x);
-		// 			return o > 0;
-		// 		};
-		// 	}
-	   	// );
-
-		// add( "negative",
-		// 	[](const t_context& c) -> t_IV {
-		// 		return [](t_e x) -> t_t {
-		// 			int o = std::get<0>(x);
-		// 			return o < 0;
-		// 		};
-		// 	}
-		// );
-
-		add( "even",
-			[](const t_context& c) -> t_IV {
-				return [](t_e x) -> t_t {
-					int o = std::get<0>(x);
-					return o % 2 == 0;
-				};
-			}
-		);
-
-		add( "prime",
-			[](const t_context& c) -> t_IV {
-				return [](t_e x) -> t_t {
-					int o = std::get<0>(x);
-					if (o <= 1) return false;
-					if (o == 2) return true;
-					if (o % 2 == 0) return false;
-					for (int i = 3; i < o; i += 2) {
-						if (o % i == 0) return false;
-					}
 					return true;
 				};
 			}
@@ -266,71 +227,13 @@ public:
 
 		// target/distractor moved to addTargetDistractor() — always added
 
-		// add (common) names for the numbers 0 to 5 (inclusive)
-		// Define them as IVs so they can be used e.g., by the quantifiers
-		// for (int i = 0; i < 6; i++) {
-		// 	add(
-		// 		std::to_string(i),
-		// 		[i](const t_context& c) -> t_IV {
-		// 			return [i](t_e x) -> t_t {
-		// 				return std::get<0>(x) == i;
-		// 			};
-		// 		}
-		// 	);
-		// }
-
 	}
 
-	// These are type <s <e, <e, t>>>
+	// Content-agnostic TVs. Currently empty — int-specific TVs (gt, equal)
+	// live in case_studies/_shared/int_lexicon.h.
+	// These are type <s, <e, <e, t>>>.
 	void addTVs() {
-		
-		// NOTE: At the moment these are never used because there are no
-		// words for individual concepts ( <s,e> ) in the lexicon.
-		// They could be redefined as taking IVs with a uniqueness presupposition
-		// (a kind of type shift et->e forced by the predicate).
-		// but I am not doing that for now.
-
-		// greater than
-		add( "gt",
-			[](const t_context& c) -> t_TV{
-				return [](t_e y) -> t_IV {
-					int o1 = std::get<0>(y);
-					return [o1](t_e x) -> t_t {
-						int o2 = std::get<0>(x);
-						return o2 > o1;
-					};
-				};
-			}
-		);
-
-		// two entities are equal with respect to their content
-		add( "equal",
-			[](const t_context& c) -> t_TV {
-				return [](t_e y) -> t_IV {
-					int o1 = std::get<0>(y);
-					return [o1](t_e x) -> t_t {
-						int o2 = std::get<0>(x);
-						return o2 == o1;
-					};
-				};
-			}
-		);
-
-		// add( "divides",
-		// 	[](const t_context& c) -> t_TV {
-		// 		return [](t_e y) -> t_IV {
-		// 			// get the content of the object
-		// 			int o1 = std::get<0>(y);
-		// 			return [o1](t_e x) -> t_t {
-		// 				// this presupposes that the number is non-zero
-		// 				if (o1 == 0){throw PresuppositionFailure();}
-		// 				int o2 = std::get<0>(x);
-		// 				return o2 % o1 == 0;
-		// 			};
-		// 		};
-		// 	}
-		// );
-		
+		// No content-agnostic TVs yet.
 	}
 
 	// These are type <s, <<e, t>, t>>

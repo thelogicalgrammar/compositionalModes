@@ -13,13 +13,14 @@ std::ostream& operator<<(std::ostream& os, const t_context& context) {
 	// Print the context
 	// which is a set of e
 	// e.g., { (1, true), (2, false) }
+	// Content is printed via the case-study-provided content_to_string.
 	os << "{ ";
 	for (auto& e : context){
-		os 
-			<< "(" 
-			<< std::get<0>(e) 
-			<< ", " 
-			<< std::get<1>(e) 
+		os
+			<< "("
+			<< content_to_string(content(e))
+			<< ", "
+			<< is_target(e)
 			<< "), ";
 	}
 	os << " }";
@@ -151,14 +152,15 @@ void addLineToDataFile(const std::filesystem::path& filename, const Hyp& h) {
 
 	auto data = h.getCommData();
 	for (auto& d : data) {
-		// input is a list of (int, bool) pairs
+		// input is a list of (content, bool) pairs.
+		// Content is serialized via the case-study-provided content_to_string.
 		std::string input = "{ ";
-		for (auto& [i, b] : d.input) {
-			input 
-				+= "(" 
-				+ std::to_string(i) 
-				+ ", " 
-				+ std::to_string(b) 
+		for (auto& e : d.input) {
+			input
+				+= "("
+				+ content_to_string(content(e))
+				+ ", "
+				+ std::to_string(is_target(e))
 				+ "), ";
 		}
 		input += " }";

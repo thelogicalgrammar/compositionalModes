@@ -1,12 +1,22 @@
 
 // Define the types of the extensions
-// the individuals are tuples of (int, bool)
-// where the int is the actual value
-// and the bool is whether or not it is a target
+// the individuals are tuples of (content, bool)
+// where the bool is whether or not it is a target
+// and the content is case-study-specific (defaults to int).
+//
+// The case study's config.h defines t_e_content and must be included
+// BEFORE this file. See case_studies/<name>/config.h.
+//
 // NOTE: I assume all ADJs are actually t_IVs
-using t_e     	= std::tuple<int, bool>;
+using t_e     	= std::tuple<t_e_content, bool>;
 using t_t   	= bool;
 using t_context = std::set<t_e>;
+
+// Helpers for accessing the parts of an entity. Use these instead
+// of std::get<0>/std::get<1> so that case studies can swap content
+// types without breaking call sites.
+inline const t_e_content& content(const t_e& e) { return std::get<0>(e); }
+inline bool is_target(const t_e& e)             { return std::get<1>(e); }
 
 using t_UC  = ft< t_t,  t_t  >;
 using t_BC  = ft< t_UC, t_t  >;

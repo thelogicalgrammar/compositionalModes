@@ -23,20 +23,20 @@ t_contextVector generateContextVariations(const t_context& context) {
     int N = context.size();
     int totalCombinations = 1 << N;
 
-    // Store the int values from the original context
-    std::vector<int> intValues;
-    for (const auto& tuple : context) {
-        intValues.push_back(std::get<0>(tuple));
+    // Store the content values from the original context
+    std::vector<t_e_content> contentValues;
+    contentValues.reserve(N);
+    for (const auto& e : context) {
+        contentValues.push_back(content(e));
     }
 
     for (int i = 0; i < totalCombinations; ++i) {
         std::bitset<32> binary(i);
         t_context newContext;
-        /* for (const auto& tuple : context) { */
 		// loop over the size of the context
 		for (int j = 0; j < N; ++j) {
             newContext.insert(std::make_tuple(
-				intValues[j],
+				contentValues[j],
 				binary[j]
 			));
         }
@@ -532,7 +532,7 @@ public:
 					// in the context being a target
 					int i = 0;
 					for (auto e : c) {
-						probs[i] += std::get<1>(e);
+						probs[i] += is_target(e);
 						i++;
 					}
 					/* std::cout << " TRUE "; */

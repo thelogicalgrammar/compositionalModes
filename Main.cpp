@@ -26,7 +26,14 @@
 #include "ParallelTempering.h"
 #include "Fleet.h"
 
-// Model stuff 
+// Model stuff
+
+// Case-study selection: set CASESTUDY=<name> at build time (see Makefile).
+// CS_CONFIG must be included before types.h; it defines t_e_content.
+#if !defined(CS_CONFIG) || !defined(CS_HYP)
+#error "CS_CONFIG and CS_HYP must be defined at build time (set CASESTUDY=<name> when invoking make)"
+#endif
+#include CS_CONFIG
 
 // The various abbreviations for types
 #include "types.h"
@@ -38,12 +45,8 @@
 #include "objects/world.h"
 // The agents that produce, interpret, and learn
 #include "objects/agent.h"
-// Grammar and Hypothesis for the parts of language to infer
-// INCLUDE ONLY THE ONE YOU NEED
-/* #include "LoTs/LoTCompFunc.h" */
-/* #include "LoTs/LoTQuantifiers.h" */
-/* #include "LoTs/LoTQuantifiersComposite.h" */
-#include "LoTs/LoTAdjectives.h"
+// Grammar and Hypothesis for the case study selected at build time
+#include CS_HYP
 // Implementation of the tradeoff analysis
 #include "objects/Tradeoff.h"
 #include "objects/CommAcc.h"
