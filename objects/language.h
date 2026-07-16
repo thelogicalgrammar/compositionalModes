@@ -62,11 +62,14 @@ public:
 			bool add_DPs,
 			bool add_PMs,
 			bool add_PMMs,
-			bool add_Qs
+			bool add_Qs,
+			bool add_distractor = true
 		) {
-		// target/distractor are always in the lexicon —
-		// they encode the hidden information in the communication game
-		addTargetDistractor();
+		// target is always in the lexicon — it encodes the hidden
+		// information in the communication game. distractor is the
+		// lexicalized complement and can be suppressed per case study.
+		addTarget();
+		if (add_distractor) addDistractor();
 		if (add_es) addEs(cSize);
 		if (add_BFs) addBFs();
 		if (add_IVs) addIVs();
@@ -78,7 +81,8 @@ public:
 	}
 
 	LexicalSemantics(size_t cSize=5) {
-		addTargetDistractor();
+		addTarget();
+		addDistractor();
 		addEs(cSize);
 		addBFs();
 		addIVs();
@@ -95,7 +99,7 @@ public:
 		interpretation_f[name] = m;
 	}
 
-	void addTargetDistractor() {
+	void addTarget() {
 		add( "target",
 			[](const t_context& c) -> t_IV {
 				return [](t_e x) -> t_t {
@@ -103,6 +107,9 @@ public:
 				};
 			}
 		);
+	}
+
+	void addDistractor() {
 		add( "distractor",
 			[](const t_context& c) -> t_IV {
 				return [](t_e x) -> t_t {

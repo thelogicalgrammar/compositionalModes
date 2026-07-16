@@ -14,11 +14,17 @@ DEFAULTLIK=60
 DEFAULTNUMADJS=5
 DEFAULTPRAGMATIC=1
 DEFAULT_EXCLUDE_EMPTY=0
+DEFAULTPTARGET=0.5
+DEFAULTLENGTHWEIGHT=0
+DEFAULTSEARCHDEPTH=2
 
 ARG1=${1:-$DEFAULTLIK}
 ARG2=${2:-$DEFAULTNUMADJS}
 ARG3=${3:-$DEFAULTPRAGMATIC}
 ARG4=${4:-$DEFAULT_EXCLUDE_EMPTY}
+ARG5=${5:-$DEFAULTPTARGET}
+ARG6=${6:-$DEFAULTLENGTHWEIGHT}
+ARG7=${7:-$DEFAULTSEARCHDEPTH}
 
 # Assuming sbatch is run from case_studies/adjectives/server/snellius,
 # jump 4 levels up to the compositionalModes root.
@@ -28,11 +34,12 @@ make CASESTUDY=adjectives EXTRA_FLAGS="-DNUM_ADJS=$ARG2"
 ID=$(date +"%Y%m%d_%H%M%S_%3N")
 ./main \
 	--steps 			2000 	 		\
-	--ptarget			0.2				\
+	--ptarget			$ARG5			\
 	--nobs 				500		 	 	\
 	--csize 			5 		 		\
 	--likelihoodweight 	$ARG1	 		\
-	--searchdepth		2		 		\
+	--lengthweight		$ARG6			\
+	--searchdepth		$ARG7			\
 	--fname 			"data/${ID}"	\
 	--pragmatic			$ARG3			\
 	--exclude-empty		$ARG4			\

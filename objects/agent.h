@@ -343,8 +343,9 @@ private:
 public:
 
 	using t_sentences_utilities = std::tuple<
-			typename Hyp::data_t, 
-			std::vector<double>
+			typename Hyp::data_t,
+			std::vector<double>,  // per-context utilities
+			std::vector<double>   // per-context produced-sentence lengths (# leaves)
 		>;
 
 	Agent() {
@@ -411,6 +412,8 @@ public:
 		typename Hyp::data_t producedSentences;
 		// utility of each produced sentence
 		std::vector<double> utilities;
+		// length (# leaves) of each produced sentence
+		std::vector<double> lengths;
 
 		// loop over contexts and produce a sentence for each
 		for (auto& context : cs) {
@@ -457,14 +460,23 @@ public:
 				}
 			}
 
-			// Select a single sentence
+			// Select a single sentence.
+			// ARGMAX: max utility; ties broken by shortest sentence (fewest leaves).
 			int index;
 			if (mode == productionMode::ARGMAX) {
-				auto max_index = std::max_element(
-					contextUtilities.begin(),
-					contextUtilities.end()
-				);
-				index = std::distance(contextUtilities.begin(), max_index);
+				double bestU = -std::numeric_limits<double>::infinity();
+				size_t bestSize = std::numeric_limits<size_t>::max();
+				int bestIdx = 0;
+				for (size_t u = 0; u < contextUtilities.size(); ++u) {
+					const size_t sz = allSentences[u]->size();
+					if (contextUtilities[u] > bestU ||
+					    (contextUtilities[u] == bestU && sz < bestSize)) {
+						bestU = contextUtilities[u];
+						bestSize = sz;
+						bestIdx = static_cast<int>(u);
+					}
+				}
+				index = bestIdx;
 			} else if (mode == productionMode::SAMPLE) {
 				t_discr_dist dist = t_discr_dist(contextUtilities.begin(),contextUtilities.end());
 				index = dist(rng);
@@ -474,14 +486,16 @@ public:
 
 			std::string producedString = allSentences[index]->toSExpression();
 			double contextUtility = contextUtilities[index];
+			double producedLength = static_cast<double>(allSentences[index]->size());
 
 			producedSentences.push_back(typename Hyp::datum_t{
-				context, 
+				context,
 				producedString,
 				1.0
 			});
 
 			utilities.push_back(contextUtility);
+			lengths.push_back(producedLength);
 
 		}
 
@@ -495,7 +509,7 @@ public:
 		}
 		// END DEBUG
 
-		return std::make_tuple(producedSentences, utilities);
+		return std::make_tuple(producedSentences, utilities, lengths);
 	}
 
 	// Goes from a sentence to the probability

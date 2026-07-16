@@ -77,6 +77,7 @@ int main(int argc, char** argv) {
 	size_t nObs 			= 50;
 	size_t cSize 			= 5;
 	double likelihoodWeight = 1;
+	double lengthWeight     = 0;
 	double searchDepth 		= 2;
 	bool pragmatic 			= false;
 	double pTarget 			= 0.5;
@@ -100,6 +101,11 @@ int main(int argc, char** argv) {
 		"--likelihoodweight",
 		likelihoodWeight,
 		"Weight of communicative accuracy in tradeoff"
+	);
+	fleet.add_option<double>(
+		"--lengthweight",
+		lengthWeight,
+		"Weight of the avg produced-sentence-length penalty in tradeoff (0 = off)"
 	);
 	fleet.add_option<double>(
 		"--searchdepth",
@@ -198,6 +204,7 @@ int main(int argc, char** argv) {
 				nObs,
 				cSize,
 				likelihoodWeight,
+				lengthWeight,
 				pTarget,
 				rng,
 				"./data/individual_systems/" + filename_hyp + ".txt",
@@ -258,8 +265,10 @@ int main(int argc, char** argv) {
 			j["nobs"] 				= nObs;
 			j["csize"] 				= cSize;
 			j["likelihoodweight"] 	= likelihoodWeight;
+			j["lengthweight"] 		= lengthWeight;
 			j["searchdepth"] 		= searchDepth;
 			j["pragmatic"] 			= pragmatic;
+			j["ptarget"] 			= pTarget;
 			j["exclude_empty"] 	= exclude_empty;
 			j["steps"] 				= FleetArgs::steps;
 			j["num_learned_items"] 	= num_learned_items;
@@ -278,6 +287,8 @@ int main(int argc, char** argv) {
 					cSize,
 					// likelihoodWeight
 					likelihoodWeight,
+					// lengthWeight
+					lengthWeight,
 					// seed
 					rng,
 					// search depth

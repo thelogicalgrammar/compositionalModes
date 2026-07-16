@@ -17,6 +17,7 @@ void estimateCommAcc(
 		size_t nObs,
 		size_t cSize,
 		double likelihoodWeight,
+		double lengthWeight,
 		double pTarget,
 		std::mt19937& rng,
 		const std::string& fname,
@@ -47,6 +48,7 @@ void estimateCommAcc(
 		nObs,
 		cSize,
 		likelihoodWeight,
+		lengthWeight,
 		rng,
 		searchDepth,
 		pTarget,
@@ -67,24 +69,31 @@ void estimateCommAcc(
 
 		// data is a vector of datum_t
 		auto data = std::get<0>(commData);
-		// utilities is a vector of doubles 
+		// utilities is a vector of doubles
 		auto utilities = std::get<1>(commData);
+		auto lengths = std::get<2>(commData);
 
 		// print the data
 		std::cout << std::endl;
-		std::cout 
-			<< "Value: " 
-			<< agent.getHypothesis().string() 
+		std::cout
+			<< "Value: "
+			<< agent.getHypothesis().string()
 			<< std::endl;
 		for (size_t h = 0; h < data.size(); h++) {
-			std::cout << data[h] << " Utility: " << utilities[h] << std::endl;
+			std::cout << data[h]
+			          << " Utility: " << utilities[h]
+			          << " Length: " << lengths[h] << std::endl;
 		}
 		std::cout << std::endl;
 
 		double commAcc = 0;
-		// calculate the average utility
-		for (size_t j = 0; j < utilities.size(); j++) {commAcc += utilities[j];}
+		double avgLength = 0;
+		for (size_t j = 0; j < utilities.size(); j++) {
+			commAcc += utilities[j];
+			avgLength += lengths[j];
+		}
 		commAcc /= nObs;
+		avgLength /= nObs;
 
 		// produce a dict with utilities and counts
 		auto utilities_counts = countUniqueElements<double>(utilities);
@@ -99,7 +108,7 @@ void estimateCommAcc(
 		}
 		utilities_counts_strs.push_back(utilities_counts_str);
 
-		double loglik = likelihoodWeight * commAcc;
+		double loglik = likelihoodWeight * commAcc - lengthWeight * avgLength;
 		logliks.push_back(loglik);
 		printProgress(static_cast<double>(i+1)/nruns);
 	}

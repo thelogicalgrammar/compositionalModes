@@ -359,6 +359,7 @@ private:
 	static inline size_t nObs = 0;
 	static inline size_t cSize = 0;
 	static inline double likelihoodWeight = 0.0;
+	static inline double lengthWeight = 0.0;  // penalty on avg produced-sentence length
 	static inline thread_local std::mt19937 local_rng{std::random_device{}()};
 	static inline size_t searchDepth = 2;
 	static inline double pTarget = 0.5;
@@ -369,14 +370,15 @@ private:
 	data_t commData;
 
 	// Lexicon configuration
-	bool add_es   = true;
-	bool add_BFs  = false;
-	bool add_IVs  = false;
-	bool add_TVs  = false;
-	bool add_DPs  = false;
-	bool add_PMs  = true;
-	bool add_PMMs = true;
-	bool add_Qs   = true;
+	bool add_es          = true;
+	bool add_BFs         = false;
+	bool add_IVs         = false;
+	bool add_TVs         = false;
+	bool add_DPs         = false;
+	bool add_PMs         = false;
+	bool add_PMMs        = true;
+	bool add_Qs          = true;
+	bool add_distractor  = false;
 
 public:
 
@@ -387,6 +389,7 @@ public:
 	static void setParams(const size_t nObs,
 	                      const size_t cSize,
 	                      const double likelihoodWeight,
+	                      const double lengthWeight,
 	                      std::mt19937& rng,
 	                      const size_t searchDepth,
 	                      const double pTarget,
@@ -395,6 +398,7 @@ public:
 		AdjsHypothesis::nObs = nObs;
 		AdjsHypothesis::cSize = cSize;
 		AdjsHypothesis::likelihoodWeight = likelihoodWeight;
+		AdjsHypothesis::lengthWeight = lengthWeight;
 		AdjsHypothesis::local_rng = rng;
 		AdjsHypothesis::searchDepth = searchDepth;
 		AdjsHypothesis::pTarget = pTarget;
@@ -482,7 +486,7 @@ public:
 	LexicalSemantics getLexicon() const {
 		LexicalSemantics lex{
 			cSize, add_es, add_BFs, add_IVs, add_TVs,
-			add_DPs, add_PMs, add_PMMs, add_Qs
+			add_DPs, add_PMs, add_PMMs, add_Qs, add_distractor
 		};
 		lex.add("thing", t_meaning([](const t_context&) -> t_IV {
 			return [](t_e) -> t_t { return true; };
@@ -621,17 +625,22 @@ public:
 
 		commData = std::get<0>(data);
 		auto utilities = std::get<1>(data);
+		auto lengths = std::get<2>(data);
 
 		double commAcc = 0;
+		double avgLength = 0;
 		for (size_t i = 0; i < utilities.size(); i++) {
 			commAcc += utilities[i];
+			avgLength += lengths[i];
 		}
 		commAcc /= nObs;
+		avgLength /= nObs;
 
-		this->likelihood = likelihoodWeight * commAcc;
+		this->likelihood = likelihoodWeight * commAcc - lengthWeight * avgLength;
 
 		std::cout << "Hypothesis: " << this->string() << std::endl;
 		std::cout << "Communicative accuracy: " << commAcc << std::endl;
+		std::cout << "Average length: " << avgLength << std::endl;
 		std::cout << "Log likelihood: " << this->likelihood << std::endl;
 		std::cout << std::endl;
 

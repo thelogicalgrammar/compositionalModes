@@ -1,28 +1,42 @@
 #!/bin/bash
 
-# Parameter sweep over:
-#   1. likelihood weight
-#   2. number of adjectives
-#   3. pragmatic setting
+# Research question: which threshold (POS) is optimal when `not` is excluded
+# from the signals, as the probability of an entity being a target varies?
+#
+# `notP` is removed from the lexicon in hypothesis.h (add_PMs = false), so
+# the speaker cannot compensate for a misplaced threshold by negating.
+#
+# Sweep dimensions:
+#   - pTarget (5 values): the variable of interest
+#   - lengthWeight (4 values): penalty on avg produced-sentence length
+#       0 = off (new ARGMAX tiebreaker still prefers shorter on exact ties)
+#       0.5–2 = active penalty; >2 collapses to "always shortest" (see notes
+#       in project memory)
+#   - searchDepth: controls the achievable length range (and run cost)
 
-# for k in 0 1; do
-#     for j in 20 30 40; do
-#         for i in 2 3 4 5; do
-#             sbatch snelliusjob.sh $j $i $k
-#             sleep 1
-#         done
+# args:                 likW  num_adjs  pragmatic  excl_empty  pTarget  lengthW  searchD
+
+# --- Primary: pTarget × lengthWeight at pragmatic=1, searchDepth=2 (20 jobs) ---
+for ptarget in 0.1 0.25 0.5 0.75 0.9; do
+    for lengthweight in 0 0.5 1 2; do
+        sbatch snelliusjob.sh  20   3       1          0          $ptarget  $lengthweight  2
+        sleep 2
+    done
+done
+
+# --- Secondary (uncomment): same grid at searchDepth=3 to expand the
+#     achievable length range (20 jobs). Note: enumeration grows fast with depth.
+# for ptarget in 0.1 0.25 0.5 0.75 0.9; do
+#     for lengthweight in 0 0.5 1 2; do
+#         sbatch snelliusjob.sh  20   3       1          0          $ptarget  $lengthweight  3
+#         sleep 2
 #     done
 # done
 
-#                       likweight   num_adjs    pragmatic
-sbatch snelliusjob.sh   20          3           0
-wait 2
-sbatch snelliusjob.sh   30          3           0
-wait 2
-sbatch snelliusjob.sh   40          3           0
-wait 2
-sbatch snelliusjob.sh   20          3           1
-wait 2
-sbatch snelliusjob.sh   30          3           1
-wait 2
-sbatch snelliusjob.sh   40          3           1
+# --- Literal-mode counterpart (uncomment) at searchDepth=2 (10 jobs):
+# for ptarget in 0.1 0.25 0.5 0.75 0.9; do
+#     for lengthweight in 0 1; do
+#         sbatch snelliusjob.sh  20   3       0          0          $ptarget  $lengthweight  2
+#         sleep 2
+#     done
+# done

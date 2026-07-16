@@ -5,7 +5,7 @@ EXTRA_FLAGS ?=
 
 # Case-study selection (override with e.g. `make CASESTUDY=quantifiers`).
 # The name must match a folder under case_studies/ containing config.h and hypothesis.h.
-CASESTUDY ?= adjectives
+CASESTUDY ?= quantifiers
 CS_FLAGS = -DCS_CONFIG='"case_studies/$(CASESTUDY)/config.h"' -DCS_HYP='"case_studies/$(CASESTUDY)/hypothesis.h"'
 
 include $(FLEET_ROOT)/Fleet.mk

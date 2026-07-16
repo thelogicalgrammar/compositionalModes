@@ -577,6 +577,8 @@ private:
 	static inline size_t cSize = 0;
 	// Weight of communicative accuracy in tradeoff
 	static inline double likelihoodWeight = 0.0;
+	// Penalty weight on average produced-sentence length
+	static inline double lengthWeight = 0.0;
 	// Each thread gets its own RNG to avoid data races under ParallelTempering
 	static inline thread_local std::mt19937 local_rng = std::mt19937(std::random_device{}());
 	// Maximum depth of signals when enumerating utterances
@@ -613,9 +615,10 @@ public:
 
 	using Super::Super; 
 
-	static void setParams(const size_t nObs, 
+	static void setParams(const size_t nObs,
 						  const size_t cSize,
 						  const double likelihoodWeight,
+						  const double lengthWeight,
 						  std::mt19937& local_rng,
 						  const size_t searchDepth,
 						  const double pTarget,
@@ -628,6 +631,7 @@ public:
 		QuantsHypothesis::nObs = nObs;
 		QuantsHypothesis::cSize = cSize;
 		QuantsHypothesis::likelihoodWeight = likelihoodWeight;
+		QuantsHypothesis::lengthWeight = lengthWeight;
 		QuantsHypothesis::local_rng = local_rng;
 		QuantsHypothesis::searchDepth = searchDepth;
 		QuantsHypothesis::pTarget = pTarget;
@@ -682,21 +686,24 @@ public:
 		commData = std::get<0>(data);
 		// utilities is a vector of doubles
 		auto utilities = std::get<1>(data);
+		auto lengths = std::get<2>(data);
 
 		double commAcc = 0;
-		// sum the utilities
-		for (size_t i = 0; i < utilities.size(); i++) {commAcc += utilities[i];}
-		// take the average utility
+		double avgLength = 0;
+		for (size_t i = 0; i < utilities.size(); i++) {
+			commAcc += utilities[i];
+			avgLength += lengths[i];
+		}
 		commAcc /= nObs;
+		avgLength /= nObs;
 
-		// The likelihood is the weighted sum of the communicative accuracy
-		// and the simplicity of the language.
-		// Note that commAcc is already the log of a probability
-		double loglik = likelihoodWeight * commAcc;
+		// Likelihood = comm-accuracy reward − length penalty.
+		// commAcc is already a log-probability.
+		double loglik = likelihoodWeight * commAcc - lengthWeight * avgLength;
 
-		// print the hypothesis
 		std::cout << "Hypothesis: " << this->string() << std::endl;
 		std::cout << "Communicative accuracy: " << commAcc << std::endl;
+		std::cout << "Average length: " << avgLength << std::endl;
 		std::cout << "Log likelihood: " << loglik << std::endl;
 		std::cout << std::endl;
 

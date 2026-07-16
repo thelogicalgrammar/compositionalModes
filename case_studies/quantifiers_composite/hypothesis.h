@@ -245,6 +245,7 @@ private:
 	static inline size_t nObs = 0;
 	static inline size_t cSize = 0;
 	static inline double likelihoodWeight = 0.0;
+	static inline double lengthWeight = 0.0;  // penalty on avg produced-sentence length
 	static inline thread_local std::mt19937 local_rng{std::random_device{}()};
 	static inline size_t searchDepth = 2;
 	static inline double pTarget = 0.5;
@@ -273,6 +274,7 @@ public:
 	static void setParams(const size_t nObs,
 	                      const size_t cSize,
 	                      const double likelihoodWeight,
+	                      const double lengthWeight,
 	                      std::mt19937& rng,
 	                      const size_t searchDepth,
 	                      const double pTarget,
@@ -281,6 +283,7 @@ public:
 		QuantsHypothesis::nObs = nObs;
 		QuantsHypothesis::cSize = cSize;
 		QuantsHypothesis::likelihoodWeight = likelihoodWeight;
+		QuantsHypothesis::lengthWeight = lengthWeight;
 		QuantsHypothesis::local_rng = rng;
 		QuantsHypothesis::searchDepth = searchDepth;
 		QuantsHypothesis::pTarget = pTarget;
@@ -508,17 +511,22 @@ public:
 
 		commData = std::get<0>(data);
 		auto utilities = std::get<1>(data);
+		auto lengths = std::get<2>(data);
 
 		double commAcc = 0;
+		double avgLength = 0;
 		for (size_t i = 0; i < utilities.size(); i++) {
 			commAcc += utilities[i];
+			avgLength += lengths[i];
 		}
 		commAcc /= nObs;
+		avgLength /= nObs;
 
-		this->likelihood = likelihoodWeight * commAcc;
+		this->likelihood = likelihoodWeight * commAcc - lengthWeight * avgLength;
 
 		std::cout << "Hypothesis: " << this->string() << std::endl;
 		std::cout << "Communicative accuracy: " << commAcc << std::endl;
+		std::cout << "Average length: " << avgLength << std::endl;
 		std::cout << "Log likelihood: " << this->likelihood << std::endl;
 		std::cout << std::endl;
 
